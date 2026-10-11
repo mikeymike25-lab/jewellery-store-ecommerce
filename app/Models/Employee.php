@@ -95,7 +95,7 @@ class Employee extends Authenticatable
 
     public function isActive(): bool
     {
-        return $this->status === 'active' && $this->employment_status === 'active';
+        return $this->status === 'active' && ($this->employment_status === null || $this->employment_status === 'active');
     }
 
     // Relationships

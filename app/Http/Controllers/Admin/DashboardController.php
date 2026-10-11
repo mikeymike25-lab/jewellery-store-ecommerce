@@ -100,27 +100,52 @@ class DashboardController extends Controller
             ->sortByDesc('timestamp')
             ->take(20);
 
-        // Get monthly data for charts (driver-agnostic for SQLite and MySQL)
-        $isSqlite = \Illuminate\Support\Facades\DB::connection()->getDriverName() === 'sqlite';
-        $monthExpr = $isSqlite ? "CAST(strftime('%m', created_at) AS INTEGER)" : "MONTH(created_at)";
+        // Get monthly data for charts (driver-agnostic for SQLite, PostgreSQL, and MySQL)
+        $monthlyOrders = [];
+        $monthlyRevenue = [];
 
-        $monthlyOrders = Order::selectRaw("{$monthExpr} as month, COUNT(*) as count")
-            ->whereYear('created_at', date('Y'))
-            ->groupBy('month')
-            ->pluck('count', 'month')
-            ->toArray();
+        try {
+            $driver = \Illuminate\Support\Facades\DB::connection()->getDriverName();
 
-        $monthlyRevenue = Order::selectRaw("{$monthExpr} as month, SUM(total_amount) as revenue")
-            ->whereYear('created_at', date('Y'))
-            ->groupBy('month')
-            ->pluck('revenue', 'month')
-            ->toArray();
+            if ($driver === 'sqlite') {
+                $monthExpr = "CAST(strftime('%m', created_at) AS INTEGER)";
+                $groupBy = DB::raw("CAST(strftime('%m', created_at) AS INTEGER)");
+            } elseif ($driver === 'pgsql') {
+                $monthExpr = "CAST(EXTRACT(MONTH FROM created_at) AS INTEGER)";
+                $groupBy = DB::raw("EXTRACT(MONTH FROM created_at)");
+            } else {
+                $monthExpr = "MONTH(created_at)";
+                $groupBy = DB::raw("MONTH(created_at)");
+            }
+
+            $monthlyOrders = Order::selectRaw("{$monthExpr} as month, COUNT(*) as count")
+                ->whereYear('created_at', date('Y'))
+                ->groupBy($groupBy)
+                ->pluck('count', 'month')
+                ->toArray();
+
+            $monthlyRevenue = Order::selectRaw("{$monthExpr} as month, SUM(total_amount) as revenue")
+                ->whereYear('created_at', date('Y'))
+                ->groupBy($groupBy)
+                ->pluck('revenue', 'month')
+                ->toArray();
+        } catch (\Throwable $e) {
+            \Log::warning('Dashboard monthly chart aggregation query failed, using empty dataset: ' . $e->getMessage());
+            $monthlyOrders = [];
+            $monthlyRevenue = [];
+        }
 
         // Order status distribution for pie chart
-        $orderStatusDistribution = Order::selectRaw('status, COUNT(*) as count')
-            ->groupBy('status')
-            ->pluck('count', 'status')
-            ->toArray();
+        $orderStatusDistribution = [];
+        try {
+            $orderStatusDistribution = Order::selectRaw('status, COUNT(*) as count')
+                ->groupBy('status')
+                ->pluck('count', 'status')
+                ->toArray();
+        } catch (\Throwable $e) {
+            \Log::warning('Dashboard order status distribution query failed: ' . $e->getMessage());
+            $orderStatusDistribution = [];
+        }
 
         // Fill missing months with 0
         for ($i = 1; $i <= 12; $i++) {
@@ -172,28 +197,34 @@ class DashboardController extends Controller
         }
 
         // Get top selling products (last 30 days)
-        $topProducts = OrderItem::whereHas('order', function ($query) {
-            $query->where('created_at', '>=', now()->subDays(30))
-                ->where('status', '!=', 'cancelled');
-        })
-            ->select('product_id', 'product_name')
-            ->selectRaw('SUM(quantity) as total_sold')
-            ->selectRaw('SUM(total_price) as total_revenue')
-            ->groupBy('product_id', 'product_name')
-            ->orderBy('total_sold', 'desc')
-            ->take(10)
-            ->get()
-            ->map(function ($item) {
-                $product = Product::find($item->product_id);
+        $topProducts = collect();
+        try {
+            $topProducts = OrderItem::whereHas('order', function ($query) {
+                $query->where('created_at', '>=', now()->subDays(30))
+                    ->where('status', '!=', 'cancelled');
+            })
+                ->select('product_id', 'product_name')
+                ->selectRaw('SUM(quantity) as total_sold')
+                ->selectRaw('SUM(total_price) as total_revenue')
+                ->groupBy('product_id', 'product_name')
+                ->orderBy('total_sold', 'desc')
+                ->take(10)
+                ->get()
+                ->map(function ($item) {
+                    $product = Product::find($item->product_id);
 
-                return (object) [
-                    'id' => $item->product_id,
-                    'name' => $item->product_name ?? ($product->name ?? 'Unknown Product'),
-                    'total_sold' => (int) $item->total_sold,
-                    'total_revenue' => (float) $item->total_revenue,
-                    'product' => $product,
-                ];
-            });
+                    return (object) [
+                        'id' => $item->product_id,
+                        'name' => $item->product_name ?? ($product->name ?? 'Unknown Product'),
+                        'total_sold' => (int) $item->total_sold,
+                        'total_revenue' => (float) $item->total_revenue,
+                        'product' => $product,
+                    ];
+                });
+        } catch (\Throwable $e) {
+            \Log::warning('Dashboard top products query failed: ' . $e->getMessage());
+            $topProducts = collect();
+        }
 
         return view('admin.dashboard.index', compact(
             'totalUsers',

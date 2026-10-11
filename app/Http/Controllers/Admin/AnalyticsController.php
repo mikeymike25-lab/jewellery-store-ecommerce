@@ -743,17 +743,33 @@ class AnalyticsController extends Controller
 
     private function getRevenueByMonth()
     {
-        $isSqlite = \Illuminate\Support\Facades\DB::connection()->getDriverName() === 'sqlite';
-        $yearExpr = $isSqlite ? "strftime('%Y', created_at)" : "YEAR(created_at)";
-        $monthExpr = $isSqlite ? "CAST(strftime('%m', created_at) AS INTEGER)" : "MONTH(created_at)";
+        try {
+            $driver = \Illuminate\Support\Facades\DB::connection()->getDriverName();
+            if ($driver === 'sqlite') {
+                $yearExpr = "strftime('%Y', created_at)";
+                $monthExpr = "CAST(strftime('%m', created_at) AS INTEGER)";
+                $groupBy = [DB::raw("strftime('%Y', created_at)"), DB::raw("CAST(strftime('%m', created_at) AS INTEGER)")];
+            } elseif ($driver === 'pgsql') {
+                $yearExpr = "CAST(EXTRACT(YEAR FROM created_at) AS INTEGER)";
+                $monthExpr = "CAST(EXTRACT(MONTH FROM created_at) AS INTEGER)";
+                $groupBy = [DB::raw("EXTRACT(YEAR FROM created_at)"), DB::raw("EXTRACT(MONTH FROM created_at)")];
+            } else {
+                $yearExpr = "YEAR(created_at)";
+                $monthExpr = "MONTH(created_at)";
+                $groupBy = [DB::raw("YEAR(created_at)"), DB::raw("MONTH(created_at)")];
+            }
 
-        return Order::where('status', '!=', 'cancelled')
-            ->selectRaw("{$yearExpr} as year, {$monthExpr} as month, SUM(total_amount) as revenue")
-            ->groupBy('year', 'month')
-            ->orderBy('year', 'desc')
-            ->orderBy('month', 'desc')
-            ->take(12)
-            ->get();
+            return Order::where('status', '!=', 'cancelled')
+                ->selectRaw("{$yearExpr} as year, {$monthExpr} as month, SUM(total_amount) as revenue")
+                ->groupBy($groupBy)
+                ->orderBy('year', 'desc')
+                ->orderBy('month', 'desc')
+                ->take(12)
+                ->get();
+        } catch (\Throwable $e) {
+            \Log::warning('Analytics getRevenueByMonth query failed: ' . $e->getMessage());
+            return collect();
+        }
     }
 
     private function getRevenueByPaymentMethod($startDate, $endDate)
