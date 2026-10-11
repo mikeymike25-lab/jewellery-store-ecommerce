@@ -29,7 +29,35 @@ class XenditPaymentController extends Controller
         $secret = Setting::get('xendit_secret_key', config('services.xendit.secret_key'));
         $env = Setting::get('xendit_environment', config('services.xendit.environment', 'test'));
 
-        abort_unless(! empty($secret), 500, 'Xendit not configured');
+        if (empty($secret)) {
+            // Simulated payment mode when API keys are not configured
+            DB::transaction(function () use ($order) {
+                $lockedOrder = Order::where('id', $order->id)->lockForUpdate()->first();
+                if ($lockedOrder && $lockedOrder->payment_status !== 'paid') {
+                    $lockedOrder->payment_status = 'paid';
+                    $lockedOrder->status = $lockedOrder->status === 'pending' ? 'processing' : $lockedOrder->status;
+                    $lockedOrder->save();
+
+                    foreach ($lockedOrder->orderItems as $item) {
+                        try {
+                            \App\Models\InventoryMovement::recordStockOut(
+                                $item->product_id,
+                                $item->quantity,
+                                'order',
+                                "Order #{$lockedOrder->order_number} - Simulated test payment",
+                                'App\Models\Order',
+                                $lockedOrder->id,
+                                null
+                            );
+                        } catch (\Exception $e) {
+                            Log::warning('Stock out error in simulated payment', ['error' => $e->getMessage()]);
+                        }
+                    }
+                }
+            });
+
+            return redirect()->route('payments.xendit.return.success', ['order' => $order->order_number]);
+        }
 
         $successUrl = URL::route('payments.xendit.return.success', ['order' => $order->order_number]);
         $failedUrl = URL::route('payments.xendit.return.failed', ['order' => $order->order_number]);
