@@ -34,13 +34,15 @@ class AppServiceProvider extends ServiceProvider
 
         // Production domains
         if ($appEnv === 'production') {
+            \Illuminate\Support\Facades\URL::forceScheme('https');
+
             if ($adminUrl && (str_contains($host, 'admin.') || $host === parse_url($adminUrl, PHP_URL_HOST))) {
                 config(['app.url' => $adminUrl]);
             } elseif ($frontendUrl && ($host === parse_url($frontendUrl, PHP_URL_HOST))) {
                 config(['app.url' => $frontendUrl]);
             } else {
-                // Fallback: construct URL from current request in production
-                config(['app.url' => $scheme.'://'.$host.$portString]);
+                // Fallback: construct URL from current request in production (force https)
+                config(['app.url' => 'https://'.$host.$portString]);
             }
         }
         // Local development domains

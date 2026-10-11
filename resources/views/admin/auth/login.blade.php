@@ -76,7 +76,7 @@
                         }
                     } catch (error) {
                         console.error('Login error:', error);
-                        this.errorMessage = 'An error occurred. Please try again.';
+                        this.errorMessage = error.message || 'An error occurred. Please try again.';
                     } finally {
                         this.isLoading = false;
                     }

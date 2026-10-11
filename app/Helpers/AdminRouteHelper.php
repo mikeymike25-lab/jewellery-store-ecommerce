@@ -74,6 +74,10 @@ class AdminRouteHelper
 
         // Non-subdomain access (e.g. eclore-backend.onrender.com/admin/...):
         // route('admin.path.' . $routeName) already generated the correct URL
+        if (config('app.env') === 'production' || (request() && request()->header('x-forwarded-proto') === 'https')) {
+            $url = preg_replace('/^http:\/\//', 'https://', $url);
+        }
+
         return $url;
     }
 

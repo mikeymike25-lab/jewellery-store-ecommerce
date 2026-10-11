@@ -15,6 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Trust Render/Cloudflare reverse proxies so HTTPS and client IPs are properly recognized
+        $middleware->trustProxies(at: '*');
+
         // Create a custom middleware group for API routes that need sessions but not CSRF
         $middleware->group('api.session', [
             \Illuminate\Session\Middleware\StartSession::class,
