@@ -107,24 +107,47 @@ class ProductController extends Controller
         $query->orderBy($sortBy, $sortOrder);
 
         $products = $query->paginate(12)->withQueryString();
-        $categories = Category::whereNull('parent_id')->where('is_active', true)->orderBy('sort_order')->get();
+
+        try {
+            $categories = Category::whereNull('parent_id')
+                ->where('is_active', true)
+                ->orderBy('category_order')
+                ->orderBy('id')
+                ->get();
+        } catch (\Throwable $e) {
+            $categories = Category::whereNull('parent_id')->get();
+        }
 
         // Get statistics
-        $stats = [
-            'total_products' => Product::count(),
-            'active_products' => Product::where('is_active', true)->count(),
-            'low_stock_products' => Product::whereRaw('stock_quantity <= low_stock_threshold')->count(),
-            'out_of_stock_products' => Product::where('stock_quantity', 0)->count(),
-            'total_inventory_value' => Product::sum(DB::raw('price * stock_quantity')),
-        ];
+        try {
+            $stats = [
+                'total_products' => (int) Product::count(),
+                'active_products' => (int) Product::where('is_active', true)->count(),
+                'low_stock_products' => (int) Product::whereRaw('stock_quantity <= low_stock_threshold')->count(),
+                'out_of_stock_products' => (int) Product::where('stock_quantity', 0)->count(),
+                'total_inventory_value' => (float) (Product::sum(DB::raw('price * stock_quantity')) ?? 0),
+            ];
+        } catch (\Throwable $e) {
+            $stats = [
+                'total_products' => (int) Product::count(),
+                'active_products' => (int) Product::where('is_active', true)->count(),
+                'low_stock_products' => 0,
+                'out_of_stock_products' => (int) Product::where('stock_quantity', 0)->count(),
+                'total_inventory_value' => 0.0,
+            ];
+        }
 
         // Get materials for filter
-        $materials = Product::select('material')
-            ->whereNotNull('material')
-            ->where('material', '!=', '')
-            ->distinct()
-            ->orderBy('material')
-            ->pluck('material');
+        try {
+            $materials = Product::select('material')
+                ->whereNotNull('material')
+                ->where('material', '!=', '')
+                ->distinct()
+                ->orderBy('material')
+                ->pluck('material');
+        } catch (\Throwable $e) {
+            $materials = collect();
+        }
 
         return view('admin.products.index', compact('products', 'categories', 'stats', 'materials'));
     }
@@ -134,7 +157,11 @@ class ProductController extends Controller
      */
     public function create()
     {
-        $categories = Category::whereNull('parent_id')->where('is_active', true)->orderBy('sort_order')->get();
+        $categories = Category::whereNull('parent_id')
+            ->where('is_active', true)
+            ->orderBy('category_order')
+            ->orderBy('id')
+            ->get();
 
         return view('admin.products.create', compact('categories'));
     }
@@ -220,7 +247,11 @@ class ProductController extends Controller
      */
     public function edit(Product $product)
     {
-        $categories = Category::whereNull('parent_id')->where('is_active', true)->orderBy('sort_order')->get();
+        $categories = Category::whereNull('parent_id')
+            ->where('is_active', true)
+            ->orderBy('category_order')
+            ->orderBy('id')
+            ->get();
 
         // Derive category and subcategory from SKU when missing
         $derivedCategoryId = null;
@@ -243,7 +274,8 @@ class ProductController extends Controller
         // Load subcategories strictly under the selected/derived main category
         $subcategories = Category::where('parent_id', $product->category_id ?: $derivedCategoryId)
             ->where('is_active', true)
-            ->orderBy('sort_order')
+            ->orderBy('category_order')
+            ->orderBy('id')
             ->get();
 
         $selectedSubcategoryId = $product->subcategory_id ?: $derivedSubcategoryId;

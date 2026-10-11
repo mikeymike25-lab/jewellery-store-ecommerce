@@ -53,23 +53,28 @@ if (! function_exists('frontend_route')) {
 if (! function_exists('storage_disk')) {
     /**
      * Get the appropriate storage disk based on environment
-     * Uses local storage for localhost, S3 for production.
+     * Uses S3 if configured, otherwise falls back safely to public.
      *
      * @return \Illuminate\Contracts\Filesystem\Filesystem
      */
     function storage_disk()
     {
-        // Force S3 in production
-        if (config('app.env') === 'production') {
-            return \Illuminate\Support\Facades\Storage::disk('s3');
+        // Only use S3 if S3 disk is default or production AND bucket is explicitly configured
+        $s3Bucket = config('filesystems.disks.s3.bucket');
+        if (! empty($s3Bucket) && (config('filesystems.default') === 's3' || config('app.env') === 'production')) {
+            try {
+                return \Illuminate\Support\Facades\Storage::disk('s3');
+            } catch (\Throwable $e) {
+                // S3 unavailable or credentials missing, fall back to public
+            }
         }
 
         try {
             $disk = config('filesystems.default');
-            if ($disk && $disk !== 'local' && $disk !== 'public') {
+            if ($disk && $disk !== 'local' && $disk !== 'public' && $disk !== 's3') {
                 return \Illuminate\Support\Facades\Storage::disk($disk);
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             // Log and fallback
         }
 
@@ -80,7 +85,7 @@ if (! function_exists('storage_disk')) {
 if (! function_exists('storage_url')) {
     /**
      * Get the appropriate storage URL based on environment
-     * Uses local URLs for localhost, S3 URLs for production.
+     * Uses local URLs for localhost, S3 URLs when configured.
      */
     function storage_url(?string $path): string
     {
@@ -93,9 +98,16 @@ if (! function_exists('storage_url')) {
             return $path;
         }
 
+        // Static frontend and asset files belong to public directory directly
+        if (str_starts_with($path, '/assets/') || str_starts_with($path, 'assets/') ||
+            str_starts_with($path, '/frontend/') || str_starts_with($path, 'frontend/') ||
+            str_starts_with($path, '/images/') || str_starts_with($path, 'images/')) {
+            return asset(ltrim($path, '/'));
+        }
+
         try {
-            // Use the centralized dynamic URL generation logic from the Storage macro
-            if (method_exists(\Illuminate\Support\Facades\Storage::class, 'getDynamicUrl')) {
+            // Use the centralized dynamic URL generation logic from the Storage macro if available
+            if (\Illuminate\Support\Facades\Storage::hasMacro('getDynamicUrl')) {
                 return \Illuminate\Support\Facades\Storage::getDynamicUrl($path);
             }
 
@@ -103,7 +115,7 @@ if (! function_exists('storage_url')) {
             $disk = storage_disk();
 
             return $disk->url($path);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             // Silence errors and allow fallback
         }
 
@@ -111,3 +123,4 @@ if (! function_exists('storage_url')) {
         return asset('storage/'.ltrim($path, '/'));
     }
 }
+

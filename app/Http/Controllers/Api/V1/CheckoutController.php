@@ -363,7 +363,7 @@ class CheckoutController extends Controller
                             "Order #{$order->order_number} - COD acquisition placement",
                             'App\Models\Order',
                             $order->id,
-                            $user->id
+                            null
                         );
                     } catch (\Exception $ex) {
                         Log::warning('Stock out notice for COD order', [
@@ -438,6 +438,59 @@ class CheckoutController extends Controller
             ], 404);
         }
 
+        // If pending and Xendit invoice is available, check with Xendit API directly
+        if ($order->payment_status === 'pending') {
+            $secret = Setting::get('xendit_secret_key', config('services.xendit.secret_key'));
+            if (! empty($secret) && $order->admin_notes && preg_match('/Xendit Invoice: ([a-f0-9]+)/', $order->admin_notes, $matches)) {
+                $invoiceId = $matches[1];
+                try {
+                    $response = Http::withBasicAuth($secret, '')->timeout(5)
+                        ->get('https://api.xendit.co/v2/invoices/'.$invoiceId);
+
+                    if ($response->successful()) {
+                        $invoice = $response->json();
+                        if (isset($invoice['status']) && in_array(strtoupper($invoice['status']), ['PAID', 'SETTLED'])) {
+                            DB::transaction(function () use ($order) {
+                                $lockedOrder = Order::where('id', $order->id)->lockForUpdate()->first();
+                                if ($lockedOrder && $lockedOrder->payment_status !== 'paid') {
+                                    $lockedOrder->payment_status = 'paid';
+                                    $lockedOrder->status = 'processing';
+                                    $lockedOrder->save();
+
+                                    foreach ($lockedOrder->orderItems as $item) {
+                                        try {
+                                            InventoryMovement::recordStockOut(
+                                                $item->product_id,
+                                                $item->quantity,
+                                                'order',
+                                                "Order #{$lockedOrder->order_number} - Xendit payment confirmed",
+                                                'App\Models\Order',
+                                                $lockedOrder->id,
+                                                null
+                                            );
+                                        } catch (\Exception $e) {
+                                            Log::warning('Stock decrement error in status check', ['error' => $e->getMessage()]);
+                                        }
+                                    }
+
+                                    // Clear ordered cart items
+                                    if ($lockedOrder->admin_notes && preg_match('/OrderedCartItemIds: (\[.*?\])/', $lockedOrder->admin_notes, $m)) {
+                                        $cartIds = json_decode($m[1], true);
+                                        if (is_array($cartIds) && count($cartIds) > 0) {
+                                            CartItem::whereIn('id', $cartIds)->delete();
+                                        }
+                                    }
+                                }
+                            });
+                            $order->refresh();
+                        }
+                    }
+                } catch (\Exception $e) {
+                    Log::warning('Failed checking Xendit status for order '.$orderNumber, ['error' => $e->getMessage()]);
+                }
+            }
+        }
+
         return response()->json([
             'success' => true,
             'order' => [
@@ -509,7 +562,7 @@ class CheckoutController extends Controller
                         "Order #{$lockedOrder->order_number} - Xendit payment confirmed",
                         'App\Models\Order',
                         $lockedOrder->id,
-                        $lockedOrder->user_id
+                        null
                     );
                 } catch (\Exception $e) {
                     Log::warning('Stock decrement error in simulatePayment', ['error' => $e->getMessage()]);

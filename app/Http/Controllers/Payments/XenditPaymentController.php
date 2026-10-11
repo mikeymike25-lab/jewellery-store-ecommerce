@@ -255,7 +255,7 @@ class XenditPaymentController extends Controller
                                                     "Order #{$lockedOrder->order_number} - Xendit payment confirmed",
                                                     'App\Models\Order',
                                                     $lockedOrder->id,
-                                                    $lockedOrder->user_id
+                                                    null
                                                 );
                                             }
                                             Log::info('Stock decremented for paid Xendit order (returnSuccess)', ['order_id' => $lockedOrder->id]);
@@ -446,7 +446,7 @@ class XenditPaymentController extends Controller
                                     "Order #{$lockedOrder->order_number} - Xendit payment confirmed",
                                     'App\Models\Order',
                                     $lockedOrder->id,
-                                    $lockedOrder->user_id
+                                    null
                                 );
                             }
                             Log::info('Stock decremented for paid Xendit order', ['order_id' => $lockedOrder->id]);

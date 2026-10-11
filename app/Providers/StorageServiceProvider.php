@@ -26,7 +26,11 @@ class StorageServiceProvider extends ServiceProvider
 
             // If using S3, let the S3 driver handle URL generation
             if ($disk === 's3') {
-                return Storage::disk('s3')->url($path);
+                try {
+                    return Storage::disk('s3')->url($path);
+                } catch (\Throwable $e) {
+                    // Fall back to local URL generation
+                }
             }
 
             // Fallback to local URL generation
@@ -44,14 +48,10 @@ class StorageServiceProvider extends ServiceProvider
         Storage::macro('getDynamicDisk', function () {
             $env = config('app.env');
             $host = request()->getHost();
+            $s3Bucket = config('filesystems.disks.s3.bucket');
 
-            // Use S3 if explicitly set in environment (highest priority)
-            if (config('filesystems.default') === 's3') {
-                return 's3';
-            }
-
-            // Use S3 for production environment
-            if ($env === 'production') {
+            // Use S3 only if explicitly configured with a non-empty bucket
+            if (! empty($s3Bucket) && (config('filesystems.default') === 's3' || $env === 'production')) {
                 return 's3';
             }
 

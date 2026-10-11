@@ -100,6 +100,8 @@ class InventoryMovement extends Model
         // Update product stock
         $product->update(['stock_quantity' => $newStock]);
 
+        $employeeId = ($createdBy !== null && \App\Models\Employee::where('id', $createdBy)->exists()) ? $createdBy : null;
+
         // Record movement
         return self::create([
             'product_id' => $productId,
@@ -111,7 +113,7 @@ class InventoryMovement extends Model
             'notes' => $notes,
             'reference_type' => $referenceType,
             'reference_id' => $referenceId,
-            'created_by' => $createdBy,
+            'created_by' => $employeeId,
         ]);
     }
 
@@ -124,6 +126,8 @@ class InventoryMovement extends Model
         // Update product stock
         $product->update(['stock_quantity' => $newStock]);
 
+        $employeeId = ($createdBy !== null && \App\Models\Employee::where('id', $createdBy)->exists()) ? $createdBy : null;
+
         // Record movement
         return self::create([
             'product_id' => $productId,
@@ -135,7 +139,7 @@ class InventoryMovement extends Model
             'notes' => $notes,
             'reference_type' => $referenceType,
             'reference_id' => $referenceId,
-            'created_by' => $createdBy,
+            'created_by' => $employeeId,
         ]);
     }
 
@@ -148,6 +152,8 @@ class InventoryMovement extends Model
         // Update product stock
         $product->update(['stock_quantity' => $newQuantity]);
 
+        $employeeId = ($createdBy !== null && \App\Models\Employee::where('id', $createdBy)->exists()) ? $createdBy : null;
+
         // Record movement
         return self::create([
             'product_id' => $productId,
@@ -157,7 +163,7 @@ class InventoryMovement extends Model
             'new_stock' => $newQuantity,
             'reason' => $reason,
             'notes' => $notes,
-            'created_by' => $createdBy,
+            'created_by' => $employeeId,
         ]);
     }
 }

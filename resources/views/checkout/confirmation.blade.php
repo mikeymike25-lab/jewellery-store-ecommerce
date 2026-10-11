@@ -108,13 +108,13 @@
                         Pop-up access has been restricted by your browser. Please permit access or use the portal entry below to proceed.
                     </p>
                 </div>
-                <button 
-                   type="button"
+                <a 
+                   href="{{ route('payments.xendit.pay', ['order' => $order->id]) }}"
                    id="manual-payment-link"
-                   onclick="openPaymentGatewayManual('{{ route('payments.xendit.pay', ['order' => $order->id]) }}', 'XenditPayment_{{ $order->order_number }}');"
-                   class="btn-gold inline-block">
+                   onclick="if (!/Android|iPhone|iPad|Mobile|wv/i.test(navigator.userAgent)) { event.preventDefault(); openPaymentGatewayManual(this.href, 'XenditPayment_{{ $order->order_number }}'); }"
+                   class="btn-gold inline-block text-center cursor-pointer">
                     ENTER SECURE PORTAL
-                </button>
+                </a>
             </div>
         </div>
     @endif
@@ -456,10 +456,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function for manual button click - opens as window (popup) when triggered by user click
     // User clicks are more likely to be respected by browsers for popup windows
     window.openPaymentGatewayManual = function(url, windowName) {
-        console.log('Manual payment gateway open requested (user click - should open as popup)');
+        console.log('Manual payment gateway open requested');
+        const isMobileOrWebView = /Android|iPhone|iPad|iPod|Mobile|wv/i.test(navigator.userAgent);
+        if (isMobileOrWebView) {
+            window.location.href = url;
+            return;
+        }
+
         try {
             // Force window opening (not tab) with explicit window features
-            // User clicks are more likely to be respected by browsers for popup windows
             const windowFeatures = [
                 'width=1200',
                 'height=800',
@@ -473,10 +478,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 'location=yes',
                 'noopener=yes',
                 'noreferrer=yes',
-                'popup=yes' // Explicit popup flag
+                'popup=yes'
             ].join(',');
             
-            console.log('Opening payment gateway manually as WINDOW (popup) with features:', windowFeatures);
+            console.log('Opening payment gateway manually with features:', windowFeatures);
             const manualWindow = window.open(url, windowName, windowFeatures);
             
             if (manualWindow) {
@@ -539,10 +544,9 @@ document.addEventListener('DOMContentLoaded', function() {
                             })
                             .catch(error => {
                                 console.error('Payment status check failed on window close:', error);
-                                // Start polling as fallback
-                            if (window.startPaymentStatusPolling) {
-                                window.startPaymentStatusPolling();
-                            }
+                                if (window.startPaymentStatusPolling) {
+                                    window.startPaymentStatusPolling();
+                                }
                             });
                         }
                     } catch (e) {
@@ -558,11 +562,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }, 3000);
             } else {
-                alert('Please allow pop-ups for this site to open the payment gateway.');
+                // Pop-up was restricted by browser - automatically navigate in current window
+                window.location.href = url;
             }
         } catch (e) {
             console.error('Error opening payment gateway manually:', e);
-            alert('Could not open payment gateway. Please check your browser pop-up settings.');
+            window.location.href = url;
         }
     };
 });
