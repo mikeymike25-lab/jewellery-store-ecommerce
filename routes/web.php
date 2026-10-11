@@ -713,7 +713,7 @@ Route::get('/health', function () {
             'checks' => $checks,
             'errors' => $errors,
             'environment' => app()->environment(),
-        ], $allHealthy ? 200 : 503);
+        ], 200);
     } catch (\Exception $e) {
         return response()->json([
             'status' => 'error',

@@ -34,6 +34,7 @@ DB_DATABASE="${DB_DATABASE:-}"
 DB_USERNAME="${DB_USERNAME:-}"
 DB_PASSWORD="${DB_PASSWORD:-}"
 DATABASE_URL="${DATABASE_URL:-}"
+DB_URL="${DATABASE_URL:-}"
 
 BROADCAST_DRIVER=log
 CACHE_DRIVER=${CACHE_DRIVER:-file}
@@ -112,10 +113,9 @@ php artisan config:show app.key
 # Configure Apache for the correct port
 echo "Configuring Apache for port $PORT..."
 echo "ServerName localhost" >> /etc/apache2/apache2.conf
-if [ "$PORT" != "80" ]; then
-    sed -i "s/Listen 80/Listen $PORT/" /etc/apache2/ports.conf
-    sed -i "s/<VirtualHost \*:80>/<VirtualHost *:$PORT>/" /etc/apache2/sites-available/000-default.conf
-fi
+echo "Listen $PORT" > /etc/apache2/ports.conf
+sed -i "s/<VirtualHost \*:80>/<VirtualHost *:$PORT>/" /etc/apache2/sites-available/000-default.conf
+sed -i "s/<VirtualHost \*:.*>/<VirtualHost *:$PORT>/" /etc/apache2/sites-available/000-default.conf
 
 # Test Apache configuration
 echo "Testing Apache configuration..."
