@@ -15,6 +15,11 @@ else
     echo "Using existing APP_KEY from environment."
 fi
 
+# Normalize APP_URL with https:// prefix if needed
+if [ -n "$APP_URL" ] && [[ "$APP_URL" != http* ]]; then
+    APP_URL="https://$APP_URL"
+fi
+
 # Create .env file with safely quoted environment variables
 echo "Creating .env file..."
 cat > .env << EOF
@@ -114,8 +119,8 @@ php artisan config:show app.key
 echo "Configuring Apache for port $PORT..."
 echo "ServerName localhost" >> /etc/apache2/apache2.conf
 echo "Listen $PORT" > /etc/apache2/ports.conf
-sed -i "s/<VirtualHost \*:80>/<VirtualHost *:$PORT>/" /etc/apache2/sites-available/000-default.conf
-sed -i "s/<VirtualHost \*:.*>/<VirtualHost *:$PORT>/" /etc/apache2/sites-available/000-default.conf
+sed -i -E "s/<VirtualHost \*:[0-9]+>/<VirtualHost *:$PORT>/" /etc/apache2/sites-available/000-default.conf
+a2ensite 000-default.conf
 
 # Test Apache configuration
 echo "Testing Apache configuration..."
