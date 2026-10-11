@@ -14,6 +14,9 @@
     <!-- TailAdmin CSS -->
     <link href="{{ asset('admin/css/style.css') }}" rel="stylesheet">
     
+    <!-- Alpine.js Persist Plugin -->
+    <script defer src="https://unpkg.com/@alpinejs/persist@3.x.x/dist/cdn.min.js"></script>
+
     <!-- Alpine.js -->
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     

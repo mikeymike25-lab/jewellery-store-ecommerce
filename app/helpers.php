@@ -13,13 +13,16 @@ if (! function_exists('admin_route')) {
      */
     function admin_route(string $routeName, $parameters = []): string
     {
-        // Use RouteHelper for consistent route generation
-        // Use class_exists check to ensure the class is available
+        // Use AdminRouteHelper for environment and host-aware route generation
+        if (class_exists(\App\Helpers\AdminRouteHelper::class)) {
+            return \App\Helpers\AdminRouteHelper::url($routeName, $parameters);
+        }
+
         if (class_exists(\App\Helpers\RouteHelper::class)) {
             return \App\Helpers\RouteHelper::adminRoute($routeName, $parameters);
         }
 
-        // Fallback: Use the route helper directly if RouteHelper class not found
+        // Fallback: Use standard route helper
         $env = config('app.env');
         $prefix = $env === 'local' ? 'admin.test.' : 'admin.';
 

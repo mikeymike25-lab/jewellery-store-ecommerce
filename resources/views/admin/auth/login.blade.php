@@ -17,6 +17,23 @@
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     
     <script>
+        function resolveAdminUrl(url, fallbackPath = '/admin/dashboard') {
+            if (!url) return fallbackPath;
+            if (url.includes('.test')) {
+                try {
+                    const parsed = new URL(url);
+                    let path = parsed.pathname;
+                    if (!path.startsWith('/admin') && window.location.pathname.startsWith('/admin')) {
+                        path = '/admin' + path;
+                    }
+                    return path + (parsed.search || '') + (parsed.hash || '');
+                } catch(e) {
+                    return fallbackPath;
+                }
+            }
+            return url;
+        }
+
         document.addEventListener('alpine:init', () => {
             Alpine.data('loginForm', () => ({
                 showOtpForm: false,
@@ -66,7 +83,7 @@
                             }
                             this.errorMessage = data.message || data.errors?.email?.[0] || 'Failed to sign in. Please try again.';
                         } else if (data.redirect) {
-                            window.location.href = data.redirect;
+                            window.location.href = resolveAdminUrl(data.redirect);
                         } else if (data.requires_otp) {
                             // Delay showing OTP form to let login form slide out first
                             setTimeout(() => {
@@ -112,7 +129,7 @@
                         });
                         
                         if (response.ok) {
-                            window.location.href = '{{ admin_route("dashboard") }}';
+                            window.location.href = resolveAdminUrl('{{ admin_route("dashboard") }}');
                         } else {
                             let data = {};
                             try {

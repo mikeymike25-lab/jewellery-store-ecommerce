@@ -17,8 +17,14 @@ class AdminRouteHelper
      */
     public static function route(string $routeName): string
     {
-        // Strip leading admin. if provided
-        if (str_starts_with($routeName, 'admin.')) {
+        // Strip any existing admin prefixes if provided
+        if (str_starts_with($routeName, 'admin.path.')) {
+            $routeName = substr($routeName, 11);
+        } elseif (str_starts_with($routeName, 'admin.test.')) {
+            $routeName = substr($routeName, 11);
+        } elseif (str_starts_with($routeName, 'admin.local.')) {
+            $routeName = substr($routeName, 12);
+        } elseif (str_starts_with($routeName, 'admin.')) {
             $routeName = substr($routeName, 6);
         }
 
@@ -54,7 +60,19 @@ class AdminRouteHelper
      */
     public static function url(string $routeName, $parameters = []): string
     {
-        $url = route(self::route($routeName), $parameters);
+        $targetRouteName = self::route($routeName);
+
+        if (! Route::has($targetRouteName)) {
+            if (Route::has('admin.path.'.$routeName)) {
+                $targetRouteName = 'admin.path.'.$routeName;
+            } elseif (Route::has('admin.'.$routeName)) {
+                $targetRouteName = 'admin.'.$routeName;
+            } elseif (Route::has($routeName)) {
+                $targetRouteName = $routeName;
+            }
+        }
+
+        $url = route($targetRouteName, $parameters);
 
         $httpHost = request() ? request()->getHost() : '';
         $currentPort = request() ? request()->getPort() : null;
@@ -73,15 +91,20 @@ class AdminRouteHelper
         }
 
         // Non-subdomain access (e.g. eclore-backend.onrender.com/admin/...):
-        // route('admin.path.' . $routeName) already generated the correct URL
-        if (str_contains($url, '.test') && $httpHost && !str_contains($httpHost, '.test')) {
+        // Ensure any .test domain or mismatch with current host is replaced with current host
+        if (str_contains($url, '.test') || ($httpHost && !str_contains($url, $httpHost))) {
             $parsedUrl = parse_url($url);
             $path = $parsedUrl['path'] ?? '/';
+            if (!str_starts_with($path, '/admin')) {
+                $path = '/admin' . $path;
+            }
             $query = isset($parsedUrl['query']) ? '?'.$parsedUrl['query'] : '';
             $fragment = isset($parsedUrl['fragment']) ? '#'.$parsedUrl['fragment'] : '';
+
+            $host = $httpHost ?: (parse_url(config('app.url'), PHP_URL_HOST) ?: 'localhost');
             $scheme = (config('app.env') === 'production' || (request() && request()->header('x-forwarded-proto') === 'https')) ? 'https' : ($currentScheme ?: 'https');
             $port = ($currentPort && $currentPort != 80 && $currentPort != 443) ? ':'.$currentPort : '';
-            $url = $scheme.'://'.$httpHost.$port.$path.$query.$fragment;
+            $url = $scheme.'://'.$host.$port.$path.$query.$fragment;
         }
 
         if (config('app.env') === 'production' || (request() && request()->header('x-forwarded-proto') === 'https')) {
