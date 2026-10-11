@@ -17,27 +17,32 @@ class AdminRouteHelper
      */
     public static function route(string $routeName): string
     {
-        $env = config('app.env');
+        // Strip leading admin. if provided
+        if (str_starts_with($routeName, 'admin.')) {
+            $routeName = substr($routeName, 6);
+        }
 
-        if ($env === 'local') {
-            // Check the current request to determine the correct prefix
-            $httpHost = request()->getHost();
+        $httpHost = request() ? request()->getHost() : '';
 
-            // Handle admin.localhost with any port
-            if ($httpHost === 'admin.localhost' || str_contains($httpHost, 'admin.localhost')) {
+        // If request is explicitly on an admin subdomain:
+        if (str_starts_with($httpHost, 'admin.')) {
+            $env = config('app.env');
+
+            if ($env === 'local') {
+                if ($httpHost === 'admin.localhost' || str_contains($httpHost, 'admin.localhost')) {
+                    return 'admin.local.'.$routeName;
+                } elseif ($httpHost === 'admin.'.config('app.base_domain') || str_contains($httpHost, 'admin.'.config('app.base_domain'))) {
+                    return 'admin.test.'.$routeName;
+                }
                 return 'admin.local.'.$routeName;
             }
-            // Handle admin.base_domain from config
-            elseif ($httpHost === 'admin.'.config('app.base_domain') || str_contains($httpHost, 'admin.'.config('app.base_domain'))) {
-                return 'admin.test.'.$routeName;
-            }
-            // Default fallback for local development
-            else {
-                return 'admin.local.'.$routeName;
-            }
-        } else {
+
             return 'admin.'.$routeName;
         }
+
+        // On single-domain deployments (e.g. Render: eclore-backend.onrender.com/admin/...)
+        // or local access via /admin prefix:
+        return 'admin.path.'.$routeName;
     }
 
     /**
@@ -51,48 +56,24 @@ class AdminRouteHelper
     {
         $url = route(self::route($routeName), $parameters);
 
-        // Ensure URL uses correct domain based on current request
-        $env = config('app.env');
-        $currentHost = request()->getHost();
-        $currentPort = request()->getPort();
-        $currentScheme = request()->getScheme();
-        $baseDomain = config('app.base_domain');
+        $httpHost = request() ? request()->getHost() : '';
+        $currentPort = request() ? request()->getPort() : null;
+        $currentScheme = request() ? request()->getScheme() : 'https';
 
-        if ($env === 'local') {
-            // For local development, ensure URL matches current request domain
-            if (str_contains($currentHost, 'admin.localhost')) {
-                // Extract the path from the generated URL
-                $parsedUrl = parse_url($url);
-                $path = $parsedUrl['path'] ?? '/';
-                $query = isset($parsedUrl['query']) ? '?'.$parsedUrl['query'] : '';
-                $fragment = isset($parsedUrl['fragment']) ? '#'.$parsedUrl['fragment'] : '';
-
-                // Rebuild URL with current host and port
-                $port = ($currentPort && $currentPort != 80 && $currentPort != 443) ? ':'.$currentPort : '';
-                $url = $currentScheme.'://admin.localhost'.$port.$path.$query.$fragment;
-            } elseif (str_contains($currentHost, 'admin.'.$baseDomain)) {
-                // Extract the path from the generated URL
-                $parsedUrl = parse_url($url);
-                $path = $parsedUrl['path'] ?? '/';
-                $query = isset($parsedUrl['query']) ? '?'.$parsedUrl['query'] : '';
-                $fragment = isset($parsedUrl['fragment']) ? '#'.$parsedUrl['fragment'] : '';
-
-                // Rebuild URL with current host and port
-                $port = ($currentPort && $currentPort != 80 && $currentPort != 443) ? ':'.$currentPort : '';
-                $scheme = ($currentPort == 8443) ? 'https' : $currentScheme;
-                $url = $scheme.'://admin.'.$baseDomain.$port.$path.$query.$fragment;
-            }
-        } elseif ($env === 'production') {
-            // For production, ensure URL uses admin domain from config/env
+        if (str_starts_with($httpHost, 'admin.')) {
             $parsedUrl = parse_url($url);
             $path = $parsedUrl['path'] ?? '/';
             $query = isset($parsedUrl['query']) ? '?'.$parsedUrl['query'] : '';
             $fragment = isset($parsedUrl['fragment']) ? '#'.$parsedUrl['fragment'] : '';
 
-            $adminUrl = config('app.admin_url') ?: 'https://admin.'.$baseDomain;
-            $url = $adminUrl.$path.$query.$fragment;
+            $port = ($currentPort && $currentPort != 80 && $currentPort != 443) ? ':'.$currentPort : '';
+            $scheme = ($currentPort == 8443) ? 'https' : $currentScheme;
+
+            return $scheme.'://'.$httpHost.$port.$path.$query.$fragment;
         }
 
+        // Non-subdomain access (e.g. eclore-backend.onrender.com/admin/...):
+        // route('admin.path.' . $routeName) already generated the correct URL
         return $url;
     }
 
@@ -110,30 +91,17 @@ class AdminRouteHelper
         $query = isset($parsedUrl['query']) ? '?'.$parsedUrl['query'] : '';
         $fragment = isset($parsedUrl['fragment']) ? '#'.$parsedUrl['fragment'] : '';
 
-        $env = config('app.env');
-        $currentHost = request()->getHost();
-        $currentPort = request()->getPort();
-        $currentScheme = request()->getScheme();
-        $baseDomain = config('app.base_domain');
+        $currentHost = request() ? request()->getHost() : '';
+        $currentPort = request() ? request()->getPort() : null;
+        $currentScheme = request() ? request()->getScheme() : 'https';
 
-        if ($env === 'local') {
-            if (str_contains($currentHost, 'admin.localhost')) {
-                $port = ($currentPort && $currentPort != 80 && $currentPort != 443) ? ':'.$currentPort : '';
+        if (str_starts_with($currentHost, 'admin.')) {
+            $port = ($currentPort && $currentPort != 80 && $currentPort != 443) ? ':'.$currentPort : '';
+            $scheme = ($currentPort == 8443) ? 'https' : $currentScheme;
 
-                return $currentScheme.'://admin.localhost'.$port.$path.$query.$fragment;
-            } elseif (str_contains($currentHost, 'admin.'.$baseDomain)) {
-                $port = ($currentPort && $currentPort != 80 && $currentPort != 443) ? ':'.$currentPort : '';
-                $scheme = ($currentPort == 8443) ? 'https' : $currentScheme;
-
-                return $scheme.'://admin.'.$baseDomain.$port.$path.$query.$fragment;
-            }
-        } elseif ($env === 'production') {
-            $adminUrl = config('app.admin_url') ?: 'https://admin.'.$baseDomain;
-
-            return $adminUrl.$path.$query.$fragment;
+            return $scheme.'://'.$currentHost.$port.$path.$query.$fragment;
         }
 
-        // Fallback: return original URL if we can't determine environment
         return $url;
     }
 
@@ -149,46 +117,26 @@ class AdminRouteHelper
     {
         $url = route($routeName, $parameters);
 
-        // Ensure URL uses correct domain based on current request
-        $env = config('app.env');
-        $currentHost = request()->getHost();
-        $currentPort = request()->getPort();
-        $currentScheme = request()->getScheme();
+        $currentHost = request() ? request()->getHost() : '';
         $baseDomain = config('app.base_domain');
 
-        if ($env === 'local') {
-            // For local development, ensure URL matches current request domain
-            if (str_contains($currentHost, 'localhost') && ! str_contains($currentHost, 'admin')) {
-                // Extract the path from the generated URL
-                $parsedUrl = parse_url($url);
-                $path = $parsedUrl['path'] ?? '/';
-                $query = isset($parsedUrl['query']) ? '?'.$parsedUrl['query'] : '';
-                $fragment = isset($parsedUrl['fragment']) ? '#'.$parsedUrl['fragment'] : '';
-
-                // Rebuild URL with current host and port
-                $port = ($currentPort && $currentPort != 80 && $currentPort != 443) ? ':'.$currentPort : '';
-                $url = $currentScheme.'://localhost'.$port.$path.$query.$fragment;
-            } elseif (str_contains($currentHost, $baseDomain) && ! str_contains($currentHost, 'admin')) {
-                // Extract the path from the generated URL
-                $parsedUrl = parse_url($url);
-                $path = $parsedUrl['path'] ?? '/';
-                $query = isset($parsedUrl['query']) ? '?'.$parsedUrl['query'] : '';
-                $fragment = isset($parsedUrl['fragment']) ? '#'.$parsedUrl['fragment'] : '';
-
-                // Rebuild URL with current host and port
-                $port = ($currentPort && $currentPort != 80 && $currentPort != 443) ? ':'.$currentPort : '';
-                $scheme = ($currentPort == 8443) ? 'https' : $currentScheme;
-                $url = $scheme.'://'.$baseDomain.$port.$path.$query.$fragment;
-            }
-        } elseif ($env === 'production') {
-            // For production, ensure URL uses frontend domain from config/env
+        // Only adjust domain if currently on an admin subdomain
+        if (str_starts_with($currentHost, 'admin.') && $baseDomain) {
             $parsedUrl = parse_url($url);
             $path = $parsedUrl['path'] ?? '/';
             $query = isset($parsedUrl['query']) ? '?'.$parsedUrl['query'] : '';
             $fragment = isset($parsedUrl['fragment']) ? '#'.$parsedUrl['fragment'] : '';
 
+            $env = config('app.env');
+            if ($env === 'local') {
+                $currentPort = request() ? request()->getPort() : null;
+                $currentScheme = request() ? request()->getScheme() : 'http';
+                $port = ($currentPort && $currentPort != 80 && $currentPort != 443) ? ':'.$currentPort : '';
+                return $currentScheme.'://'.$baseDomain.$port.$path.$query.$fragment;
+            }
+
             $frontendUrl = config('app.frontend_url') ?: 'https://'.$baseDomain;
-            $url = $frontendUrl.$path.$query.$fragment;
+            return $frontendUrl.$path.$query.$fragment;
         }
 
         return $url;

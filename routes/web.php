@@ -35,7 +35,7 @@ $adminRoutes = function () {
             return redirect()->to(admin_route('dashboard'));
         }
 
-        return redirect('/login');
+        return redirect()->to(admin_route('login'));
     })->name('index');
 
     // Admin logout routes (outside middleware to handle CSRF expiration)
@@ -371,51 +371,30 @@ $adminRoutes = function () {
     });
 };
 
-// Register admin routes for both domains
+// Register admin routes for subdomains (when accessed via admin.* host)
 Route::domain('admin.eclore.test')->name('admin.test.')->group($adminRoutes);
 Route::domain('admin.localhost')->name('admin.local.')->group($adminRoutes);
 Route::domain('admin.eclorejewellery.shop')->name('admin.')->group($adminRoutes);
 
-// Fallback admin routes for any admin subdomain (handles ports)
-Route::group(['middleware' => 'admin.subdomain'], function () use ($adminRoutes) {
-    $adminRoutes();
-})->name('admin.fallback.');
+// Register admin routes with /admin prefix (for single domains like Render: eclore-backend.onrender.com/admin)
+Route::prefix('admin')->name('admin.path.')->group($adminRoutes);
 
 // Public routes - but check for admin subdomain first
 Route::get('/', function () {
     $host = request()->getHost();
 
-    // If this is an admin subdomain, redirect to admin login
-    if ($host === 'admin.localhost' || $host === 'admin.eclore.test' || $host === 'admin.eclorejewellery.shop') {
+    // If this is an admin subdomain, redirect to admin login/dashboard
+    if (str_starts_with($host, 'admin.')) {
         if (auth()->guard('admin')->check()) {
             return redirect()->to(admin_route('dashboard'));
         }
 
-        return redirect('/login');
+        return redirect()->to(admin_route('login'));
     }
 
     // Otherwise, show the normal homepage
     return app(HomeController::class)->index();
 })->name('home');
-
-// Admin redirect for direct path access (e.g. localhost:8000/admin -> admin.localhost:8000)
-Route::get('/admin', function () {
-    $port = request()->getPort();
-    $portString = in_array($port, [80, 443]) ? '' : ':' . $port;
-    $scheme = request()->getScheme();
-    $host = request()->getHost();
-    $adminHost = str_starts_with($host, 'admin.') ? $host : 'admin.' . ($host === '127.0.0.1' ? 'localhost' : $host);
-    return redirect($scheme . '://' . $adminHost . $portString . '/login');
-});
-
-Route::get('/admin/{any}', function ($any) {
-    $port = request()->getPort();
-    $portString = in_array($port, [80, 443]) ? '' : ':' . $port;
-    $scheme = request()->getScheme();
-    $host = request()->getHost();
-    $adminHost = str_starts_with($host, 'admin.') ? $host : 'admin.' . ($host === '127.0.0.1' ? 'localhost' : $host);
-    return redirect($scheme . '://' . $adminHost . $portString . '/' . ltrim($any, '/'));
-})->where('any', '.*');
 
 Route::get('/catalogue', [ProductController::class, 'index'])->name('catalogue');
 Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');

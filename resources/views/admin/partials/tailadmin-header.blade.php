@@ -496,7 +496,7 @@
               />
             </svg>
             Sign out
-          </a>m>
+          </a>
         </div>
         <!-- Dropdown End -->
       </div>
