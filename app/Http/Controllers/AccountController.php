@@ -698,7 +698,7 @@ class AccountController extends Controller
             return response()->json(['success' => false, 'message' => 'Order not found.'], 404);
         }
 
-        if ($order->payment_status !== 'paid') {
+        if (strtolower((string) $order->payment_status) !== 'paid') {
             return response()->json([
                 'success' => false,
                 'message' => 'Official tax receipt is only available for paid orders.',
