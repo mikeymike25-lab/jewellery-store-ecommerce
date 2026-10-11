@@ -21,7 +21,7 @@ class NewsletterController extends Controller
             ['is_active' => true]
         );
 
-        if ($request->ajax()) {
+        if ($request->ajax() || $request->wantsJson() || $request->is('api/*')) {
             return response()->json([
                 'success' => true,
                 'message' => 'Thank you for joining the world of Éclore.',

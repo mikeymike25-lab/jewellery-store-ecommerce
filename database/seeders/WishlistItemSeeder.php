@@ -16,15 +16,26 @@ class WishlistItemSeeder extends Seeder
         $users = User::all();
         $products = Product::all();
 
+        $inserted = [];
+        $items = [];
+
         for ($i = 0; $i < 400; $i++) {
             $user = $users->random();
             $product = $products->random();
+            $key = $user->id.'-'.$product->id;
 
-            DB::table('wishlist_items')->insert([
+            if (isset($inserted[$key])) {
+                continue;
+            }
+            $inserted[$key] = true;
+
+            $items[] = [
                 'user_id' => $user->id,
                 'product_id' => $product->id,
                 'created_at' => now()->subDays(rand(1, 30)),
-            ]);
+            ];
         }
+
+        DB::table('wishlist_items')->insert($items);
     }
 }

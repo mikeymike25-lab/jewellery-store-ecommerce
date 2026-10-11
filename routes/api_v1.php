@@ -4,10 +4,16 @@ use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Api\V1\AuthController as ApiAuthController;
 use App\Http\Controllers\Api\V1\CheckoutController as ApiCheckoutController;
 use App\Http\Controllers\Api\V1\ProductController as ApiProductController;
+use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\ContactController;
+use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProductReviewController;
+use App\Http\Controllers\RefundRequestController;
 use App\Http\Controllers\WishlistController;
 use App\Models\Order;
 use App\Models\Product;
@@ -35,6 +41,8 @@ Route::prefix('auth')->group(function () {
     Route::post('/reset-password', [ApiAuthController::class, 'resetPassword'])->name('api.v1.auth.reset-password');
     Route::get('/check-username/{username}', [AuthController::class, 'checkUsername'])->name('api.v1.auth.check-username');
     Route::get('/check-email/{email}', [AuthController::class, 'checkEmail'])->name('api.v1.auth.check-email');
+    Route::get('/google/redirect', [ApiAuthController::class, 'googleRedirect'])->name('api.v1.auth.google.redirect');
+    Route::get('/google/callback', [ApiAuthController::class, 'googleCallback'])->name('api.v1.auth.google.callback');
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/user', [ApiAuthController::class, 'user'])->name('api.v1.auth.user');
@@ -103,6 +111,7 @@ Route::middleware('auth:sanctum')->prefix('checkout')->group(function () {
 
 Route::get('/orders/{orderNumber}/status', [ApiCheckoutController::class, 'status'])->name('api.v1.orders.status');
 Route::get('/orders/{orderNumber}', [ApiCheckoutController::class, 'show'])->name('api.v1.orders.show');
+Route::post('/orders/track', [OrderController::class, 'trackOrderApi'])->name('api.v1.orders.track');
 Route::post('/orders/{orderNumber}/simulate-payment', [ApiCheckoutController::class, 'simulatePayment'])->name('api.v1.orders.simulate-payment');
 
 // ==========================================
@@ -110,10 +119,16 @@ Route::post('/orders/{orderNumber}/simulate-payment', [ApiCheckoutController::cl
 // ==========================================
 Route::middleware('auth:sanctum')->prefix('account')->group(function () {
     Route::get('/orders', [AccountController::class, 'getOrders'])->name('api.v1.account.orders');
+    Route::get('/orders/{orderNumber}/receipt-pdf', [AccountController::class, 'downloadReceiptPdf'])->name('api.v1.account.orders.receipt-pdf');
     Route::post('/profile/update', [AccountController::class, 'updateProfile'])->name('api.v1.account.profile.update');
+    Route::post('/address/update', [AccountController::class, 'updateAddress'])->name('api.v1.account.address.update');
+    Route::post('/address/add', [AccountController::class, 'addAddress'])->name('api.v1.account.address.add');
     Route::post('/password/change', [AccountController::class, 'changePassword'])->name('api.v1.account.password.change');
     Route::get('/payment-methods', [AccountController::class, 'getPaymentMethods'])->name('api.v1.account.payment-methods');
     Route::delete('/payment-methods/{id}', [AccountController::class, 'removePaymentMethod'])->name('api.v1.account.payment-methods.remove');
+    Route::get('/returns-repairs', [RefundRequestController::class, 'index'])->name('api.v1.account.returns-repairs.index');
+    Route::post('/returns-repairs', [RefundRequestController::class, 'store'])->name('api.v1.account.returns-repairs.store');
+    Route::get('/appointments', [AppointmentController::class, 'userAppointments'])->name('api.v1.account.appointments');
 });
 
 // ==========================================
@@ -127,3 +142,37 @@ Route::middleware('auth:sanctum')->prefix('notifications')->group(function () {
     Route::delete('/{id}', [NotificationController::class, 'deleteNotification'])->name('api.v1.notifications.delete');
     Route::delete('/clear-all', [NotificationController::class, 'clearAll'])->name('api.v1.notifications.clear-all');
 });
+
+// ==========================================
+// 9. Newsletter
+// ==========================================
+Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe'])->name('api.v1.newsletter.subscribe');
+
+// ==========================================
+// 10. Boutiques & Salon Appointments
+// ==========================================
+Route::get('/boutiques', [PageController::class, 'getBoutiquesApi'])->name('api.v1.boutiques.index');
+Route::post('/appointments/book', [AppointmentController::class, 'store'])->name('api.v1.appointments.book');
+
+// ==========================================
+// 11. Journal & Editorial Stories
+// ==========================================
+Route::get('/stories', [PageController::class, 'getStoriesApi'])->name('api.v1.stories.index');
+Route::get('/stories/{slug}', [PageController::class, 'getStoryDetailApi'])->name('api.v1.stories.show');
+
+// ==========================================
+// 12. Institutional & CMS Pages
+// ==========================================
+Route::get('/content/{slug}', [PageController::class, 'getContentPageApi'])->name('api.v1.content.show');
+
+// ==========================================
+// 13. Noupe AI Concierge Chat
+// ==========================================
+Route::post('/concierge/chat', [PageController::class, 'conciergeChatApi'])->name('api.v1.concierge.chat');
+
+// ==========================================
+// 14. Customer Contact Inquiries
+// ==========================================
+Route::post('/contact', [ContactController::class, 'store'])->name('api.v1.contact.store');
+
+

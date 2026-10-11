@@ -293,6 +293,46 @@ class OrderController extends Controller
             }
         }
 
+        // Merge and preserve address fields to avoid nullifying existing customer addresses
+        $mergeAddress = function ($incoming, $existing, $user) {
+            $existing = is_array($existing) ? $existing : [];
+            $filteredIncoming = is_array($incoming) ? array_filter($incoming, function ($val) {
+                return !is_null($val) && trim((string) $val) !== '';
+            }) : [];
+
+            $result = array_merge($existing, $filteredIncoming);
+
+            if (!empty($result['street']) && empty($result['address_line_1'])) {
+                $result['address_line_1'] = $result['street'];
+            } elseif (!empty($result['address_line_1']) && empty($result['street'])) {
+                $result['street'] = $result['address_line_1'];
+            }
+
+            if (!empty($result['name'])) {
+                if (empty($result['first_name'])) {
+                    $parts = explode(' ', (string) $result['name'], 2);
+                    $result['first_name'] = $parts[0] ?? '';
+                    $result['last_name'] = $parts[1] ?? '';
+                }
+            } elseif (!empty($result['first_name']) || !empty($result['last_name'])) {
+                $result['name'] = trim(($result['first_name'] ?? '') . ' ' . ($result['last_name'] ?? ''));
+            } elseif ($user) {
+                $result['name'] = $user->name ?? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
+            }
+
+            if (!empty($result['zip_code']) && empty($result['postal_code'])) {
+                $result['postal_code'] = $result['zip_code'];
+            }
+            if (empty($result['country'])) {
+                $result['country'] = 'Philippines';
+            }
+
+            return $result;
+        };
+
+        $validated['billing_address'] = $mergeAddress($request->input('billing_address', []), $order->billing_address, $order->user);
+        $validated['shipping_address'] = $mergeAddress($request->input('shipping_address', []), $order->shipping_address, $order->user);
+
         $oldValues = $order->only(['status', 'payment_status', 'shipping_method', 'tracking_number']);
         $order->update($validated);
 

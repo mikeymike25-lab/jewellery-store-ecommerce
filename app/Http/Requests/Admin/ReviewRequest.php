@@ -21,7 +21,7 @@ class ReviewRequest extends FormRequest
             'is_approved' => 'boolean',
             'is_featured' => 'boolean',
             'admin_response' => 'nullable|string|max:1000',
-            'responded_by' => 'nullable|exists:admins,id',
+            'responded_by' => 'nullable|exists:employees,id',
         ];
     }
 

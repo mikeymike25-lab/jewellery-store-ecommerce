@@ -91,6 +91,9 @@
     .leaflet-container {
         font-family: 'Azeret Mono', sans-serif !important;
     }
+    .map-container .leaflet-tile {
+        filter: grayscale(100%) brightness(102%) contrast(90%);
+    }
     .custom-marker {
         width: 12px;
         height: 12px;
@@ -159,7 +162,7 @@
 
                 <!-- Interactive Map -->
                 <div class="relative h-[700px] lg:h-auto" data-aos="fade-left">
-                    <div id="map" class="map-container h-full shadow-2xl grayscale-[0.2]"></div>
+                    <div id="map" class="map-container h-full shadow-2xl"></div>
                     <div class="absolute bottom-8 right-8 z-30">
                         <div class="region-dropdown" id="regionSelector">
                             <p class="font-azeret text-[9px] tracking-widest text-[#999] mb-1.5 uppercase">Switch Region</p>
@@ -294,9 +297,20 @@
             zoomControl: false
         });
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '© OpenStreetMap contributors'
+        @php
+            $cartoKey = config('services.carto.api_key');
+        @endphp
+        @if(!empty($cartoKey))
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key={{ $cartoKey }}', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            maxZoom: 19
         }).addTo(map);
+        @else
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        }).addTo(map);
+        @endif
 
         const customIcon = L.divIcon({
             className: 'custom-marker',

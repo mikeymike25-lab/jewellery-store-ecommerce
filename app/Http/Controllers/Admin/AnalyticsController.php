@@ -743,8 +743,12 @@ class AnalyticsController extends Controller
 
     private function getRevenueByMonth()
     {
+        $isSqlite = \Illuminate\Support\Facades\DB::connection()->getDriverName() === 'sqlite';
+        $yearExpr = $isSqlite ? "strftime('%Y', created_at)" : "YEAR(created_at)";
+        $monthExpr = $isSqlite ? "CAST(strftime('%m', created_at) AS INTEGER)" : "MONTH(created_at)";
+
         return Order::where('status', '!=', 'cancelled')
-            ->selectRaw('YEAR(created_at) as year, MONTH(created_at) as month, SUM(total_amount) as revenue')
+            ->selectRaw("{$yearExpr} as year, {$monthExpr} as month, SUM(total_amount) as revenue")
             ->groupBy('year', 'month')
             ->orderBy('year', 'desc')
             ->orderBy('month', 'desc')

@@ -7,11 +7,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -29,17 +30,11 @@ class User extends Authenticatable
         'provider',
         'phone',
         'region',
-        'date_of_birth',
-        'address_line_1',
-        'address_line_2',
         'street',
         'barangay',
         'city',
         'province',
-        'state',
-        'postal_code',
         'zip_code',
-        'country',
         'newsletter_subscribed',
         'newsletter_product_updates',
         'newsletter_special_offers',
@@ -57,6 +52,15 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+    ];
+
+    /**
+     * The accessors to append to the model's array and JSON form.
+     *
+     * @var list<string>
+     */
+    protected $appends = [
+        'name',
     ];
 
     /**

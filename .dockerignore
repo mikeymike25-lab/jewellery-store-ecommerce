@@ -52,3 +52,8 @@ nixpacks.toml
 *.sqlite3
 database/database.sqlite
 database/database_backup_*.sqlite
+
+# Ionic Mobile Build (Android SDK & node_modules)
+frontend-ionic/node_modules/
+frontend-ionic/android/
+frontend-ionic/dist/

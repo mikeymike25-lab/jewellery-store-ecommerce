@@ -22,6 +22,7 @@ class ProductSeeder extends Seeder
         $diamond_scales = ['no diamond', 'accent (< 0.10 ct)', '0.10 - 0.29 ct', '0.30 - 0.49 ct', '0.50 - 0.99 ct', '1.00 + ct'];
 
         $prefixes = ['Éclore', 'Lumière', 'Soleil', 'Clair', 'Aura', 'Celestial', 'Opulence', 'Royal', 'Divine', 'Radiance'];
+        $categoryCounters = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0];
 
         foreach ($subcategories as $sub) {
             $count = 5; // Default
@@ -196,6 +197,20 @@ class ProductSeeder extends Seeder
                 $price = rand($minPrice, $maxPrice);
                 $cost = $price * 0.5;
 
+                $catPrefixMap = [
+                    1 => 'ring',
+                    2 => 'necklace',
+                    3 => 'earring',
+                    4 => 'bracelet',
+                    5 => 'timepiece',
+                ];
+                $catId = $sub->parent_id ?? 1;
+                $categoryCounters[$catId] = ($categoryCounters[$catId] ?? 0) + 1;
+                $itemNum = $categoryCounters[$catId];
+                $catPfx = $catPrefixMap[$catId] ?? 'ring';
+
+                $primaryImgPath = "/assets/products/{$catPfx}-{$itemNum}.jpg";
+
                 Product::create([
                     'category_id' => $sub->parent_id,
                     'subcategory_id' => $sub->id,
@@ -217,11 +232,8 @@ class ProductSeeder extends Seeder
                     'color' => $color,
                     'gemstone' => $gemstone,
                     'diamonds' => $diamond,
-                    'images' => ['https://placehold.co/800x1000/f8f8f8/1a1a1a?text='.urlencode($name)],
-                    'gallery' => [
-                        'https://placehold.co/800x1000/f8f8f8/1a1a1a?text=Detail',
-                        'https://placehold.co/800x1000/f8f8f8/1a1a1a?text=Lifestyle',
-                    ],
+                    'images' => [$primaryImgPath],
+                    'gallery' => [$primaryImgPath],
                     'featured' => rand(1, 20) === 1,
                     'is_active' => true,
                     'view_count' => rand(50, 5000),

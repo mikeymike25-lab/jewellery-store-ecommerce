@@ -4,6 +4,9 @@ use App\Http\Controllers\WishlistController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+// Version 1 REST API (Stateless Bearer auth & mobile endpoints)
+Route::prefix('v1')->group(base_path('routes/api_v1.php'));
+
 // API routes for frontend JavaScript
 
 // Get newsroom stories (AJAX)
@@ -55,13 +58,6 @@ Route::get('/products', function (Request $request) {
             }
         }
 
-        // Handle room filtering
-        if ($request->has('room') && $request->get('room') !== 'all') {
-            $roomValue = $request->get('room');
-            $query->whereNotNull('room_category')
-                ->where('room_category', '!=', '[]')
-                ->whereJsonContains('room_category', $roomValue);
-        }
 
         // Handle sorting
         switch ($request->get('sort')) {
@@ -344,24 +340,25 @@ Route::post('/products/{id}/track-view', function ($id) {
     }
 });
 
-// Cleanup old guest carts (for testing/debugging)
+// Cleanup old guest carts (for testing/maintenance)
 Route::post('/cart/cleanup', function (Request $request) {
     try {
-        // Clear all guest carts (carts with user_id = null)
-        $deletedCarts = \App\Models\Cart::whereNull('user_id')->delete();
+        $days = (int) $request->input('days', 30);
+        $cutoff = now()->subDays($days);
 
-        // Clear all cart items from deleted carts
-        $deletedItems = \App\Models\CartItem::whereNotExists(function ($query) {
-            $query->select(\DB::raw(1))
-                ->from('carts')
-                ->whereRaw('carts.id = cart_items.cart_id');
-        })->delete();
+        // Clear guest cart items older than cutoff
+        $deletedItems = \App\Models\CartItem::whereNull('user_id')
+            ->where('created_at', '<', $cutoff)
+            ->delete();
+
+        // Clear expired guest sessions
+        $deletedSessions = \App\Models\GuestSession::where('last_activity_at', '<', $cutoff)->delete();
 
         return response()->json([
             'success' => true,
             'message' => 'Cleanup completed',
-            'deleted_carts' => $deletedCarts,
             'deleted_items' => $deletedItems,
+            'deleted_sessions' => $deletedSessions,
         ]);
     } catch (\Exception $e) {
         return response()->json([

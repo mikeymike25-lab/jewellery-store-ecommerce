@@ -114,9 +114,20 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated',
+            ], 401);
+        }
+
+        $fullName = $user->name ?: trim(($user->first_name ?? '').' '.($user->last_name ?? ''));
+
         return response()->json([
             'success' => true,
-            'user' => $user,
+            'user' => array_merge($user->toArray(), [
+                'name' => $fullName ?: ($user->username ?? 'Client'),
+            ]),
         ]);
     }
 
@@ -142,6 +153,13 @@ class AuthController extends Controller
             $input['first_name'] = $parts[0];
             $input['last_name'] = $parts[1] ?? 'Client';
         }
+        if (!empty($input['username']) && str_contains($input['username'], '@')) {
+            $input['username'] = strstr($input['username'], '@', true);
+        }
+        if (!empty($input['username'])) {
+            $input['username'] = preg_replace('/[^a-zA-Z0-9_]/', '', $input['username']);
+        }
+
         if (empty($input['username']) && !empty($input['email'])) {
             $baseUser = strstr($input['email'], '@', true);
             $cleanUser = preg_replace('/[^a-zA-Z0-9_]/', '', $baseUser) ?: 'client';
@@ -318,5 +336,100 @@ class AuthController extends Controller
             'success' => true,
             'message' => 'Password reset successfully. You may now sign in with your new credentials.',
         ]);
+    }
+
+    /**
+     * Mobile / API Google OAuth Redirect URL
+     */
+    public function googleRedirect(Request $request)
+    {
+        try {
+            $redirectUrl = \Laravel\Socialite\Facades\Socialite::driver('google')
+                ->stateless()
+                ->redirect()
+                ->getTargetUrl();
+
+            if ($request->wantsJson()) {
+                return response()->json(['success' => true, 'url' => $redirectUrl]);
+            }
+
+            return redirect($redirectUrl);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Google authentication service is unavailable: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Mobile / API Google OAuth Callback
+     */
+    public function googleCallback(Request $request)
+    {
+        $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
+
+        try {
+            $googleUser = \Laravel\Socialite\Facades\Socialite::driver('google')->stateless()->user();
+            $existingUser = User::where('google_id', $googleUser->id)
+                ->orWhere('email', $googleUser->email)
+                ->first();
+
+            if ($existingUser) {
+                if (! $existingUser->google_id) {
+                    $existingUser->update([
+                        'google_id' => $googleUser->id,
+                        'provider' => 'google',
+                    ]);
+                }
+                $user = $existingUser;
+            } else {
+                $nameParts = explode(' ', trim($googleUser->name ?? 'Éclore Patron'));
+                $user = User::create([
+                    'first_name' => $nameParts[0] ?? 'Patron',
+                    'last_name' => implode(' ', array_slice($nameParts, 1)) ?: 'Maison',
+                    'email' => $googleUser->email,
+                    'username' => 'client_'.substr(md5($googleUser->id.time()), 0, 8),
+                    'google_id' => $googleUser->id,
+                    'provider' => 'google',
+                    'email_verified_at' => now(),
+                ]);
+            }
+
+            // Migrate guest cart and wishlist
+            $guestSessionId = $request->header('X-Guest-Session-Id') ?: $request->input('guest_session_id');
+            if ($guestSessionId) {
+                try {
+                    $cartController = new CartController;
+                    $cartController->migrateCartToUser($user->id, $guestSessionId);
+                    $wishlistService = app(SessionWishlistService::class);
+                    $wishlistService->migrateGuestToUser($user->id, $guestSessionId);
+                } catch (\Throwable $e) {
+                    \Log::warning('Guest migration during Google OAuth failed: '.$e->getMessage());
+                }
+            }
+
+            $token = $user->createToken('ionic-google-oauth')->plainTextToken;
+
+            // Support direct JSON response if explicitly requesting JSON
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'token' => $token,
+                    'user' => $user,
+                ]);
+            }
+
+            return redirect($frontendUrl.'/tabs/account?token='.$token);
+        } catch (\Throwable $e) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Google authentication failed: '.$e->getMessage(),
+                ], 400);
+            }
+
+            return redirect($frontendUrl.'/tabs/account?error='.urlencode($e->getMessage()));
+        }
     }
 }

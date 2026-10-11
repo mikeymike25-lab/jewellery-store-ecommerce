@@ -100,14 +100,17 @@ class DashboardController extends Controller
             ->sortByDesc('timestamp')
             ->take(20);
 
-        // Get monthly data for charts
-        $monthlyOrders = Order::selectRaw('MONTH(created_at) as month, COUNT(*) as count')
+        // Get monthly data for charts (driver-agnostic for SQLite and MySQL)
+        $isSqlite = \Illuminate\Support\Facades\DB::connection()->getDriverName() === 'sqlite';
+        $monthExpr = $isSqlite ? "CAST(strftime('%m', created_at) AS INTEGER)" : "MONTH(created_at)";
+
+        $monthlyOrders = Order::selectRaw("{$monthExpr} as month, COUNT(*) as count")
             ->whereYear('created_at', date('Y'))
             ->groupBy('month')
             ->pluck('count', 'month')
             ->toArray();
 
-        $monthlyRevenue = Order::selectRaw('MONTH(created_at) as month, SUM(total_amount) as revenue')
+        $monthlyRevenue = Order::selectRaw("{$monthExpr} as month, SUM(total_amount) as revenue")
             ->whereYear('created_at', date('Y'))
             ->groupBy('month')
             ->pluck('revenue', 'month')

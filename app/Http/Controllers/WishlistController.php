@@ -98,13 +98,38 @@ class WishlistController extends Controller
     }
 
     /**
+     * Resolve session identifier from header or PHP session.
+     */
+    private function resolveSessionId(Request $request): string
+    {
+        $guestHeader = $request->header('X-Guest-Session-Id');
+        if (! empty($guestHeader) && is_string($guestHeader)) {
+            return $guestHeader;
+        }
+
+        if (! session()->isStarted()) {
+            session()->start();
+        }
+
+        return session()->getId();
+    }
+
+    /**
+     * Resolve authenticated user ID from Sanctum token or session.
+     */
+    private function resolveUserId(Request $request): ?int
+    {
+        return $request->user('sanctum')?->id ?? $request->user()?->id ?? \Auth::id();
+    }
+
+    /**
      * Get wishlist items for current user or guest.
      */
     public function index(Request $request)
     {
         try {
-            $sessionId = session()->getId();
-            $userId = \Auth::id();
+            $sessionId = $this->resolveSessionId($request);
+            $userId = $this->resolveUserId($request);
 
             \Log::info('Fetching wishlist items from Redis', [
                 'user_id' => $userId,
@@ -151,8 +176,8 @@ class WishlistController extends Controller
                 'product_id' => 'required|integer|exists:products,id',
             ]);
 
-            $sessionId = session()->getId();
-            $userId = \Auth::id();
+            $sessionId = $this->resolveSessionId($request);
+            $userId = $this->resolveUserId($request);
             $productId = $request->product_id;
 
             \Log::info('Processing wishlist add with Redis', [
@@ -222,8 +247,8 @@ class WishlistController extends Controller
                 'product_id' => 'required|integer|exists:products,id',
             ]);
 
-            $sessionId = session()->getId();
-            $userId = \Auth::id();
+            $sessionId = $this->resolveSessionId($request);
+            $userId = $this->resolveUserId($request);
             $productId = $request->product_id;
 
             // Remove from database wishlist
@@ -242,11 +267,11 @@ class WishlistController extends Controller
     /**
      * Check if product is in wishlist.
      */
-    public function check($productId)
+    public function check($productId, Request $request)
     {
         try {
-            $sessionId = session()->getId();
-            $userId = \Auth::id();
+            $sessionId = $this->resolveSessionId($request);
+            $userId = $this->resolveUserId($request);
 
             $inWishlist = $this->sessionWishlistService->isInWishlist($productId, $userId, $sessionId);
 
@@ -276,8 +301,8 @@ class WishlistController extends Controller
                 'product_id' => 'required|integer|exists:products,id',
             ]);
 
-            $sessionId = session()->getId();
-            $userId = \Auth::id();
+            $sessionId = $this->resolveSessionId($request);
+            $userId = $this->resolveUserId($request);
             $productId = $request->product_id;
 
             \Log::info('Processing wishlist toggle', [
@@ -368,8 +393,8 @@ class WishlistController extends Controller
     public function clear(Request $request)
     {
         try {
-            $sessionId = session()->getId();
-            $userId = \Auth::id();
+            $sessionId = $this->resolveSessionId($request);
+            $userId = $this->resolveUserId($request);
 
             // Clear from database
             $this->sessionWishlistService->clearWishlist($userId, $sessionId);
@@ -393,22 +418,22 @@ class WishlistController extends Controller
     public function migrate(Request $request)
     {
         try {
-            $user = auth()->user();
-            if (! $user) {
+            $userId = $this->resolveUserId($request);
+            if (! $userId) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Authentication required',
                 ], 401);
             }
 
-            $sessionId = session()->getId();
+            $sessionId = $request->input('guest_session_id') ?: $request->header('X-Guest-Session-Id') ?: session()->getId();
 
             \Log::info('Manual wishlist migration triggered', [
-                'user_id' => $user->id,
+                'user_id' => $userId,
                 'session_id' => $sessionId,
             ]);
 
-            $this->migrateWishlistToUser($user->id, $sessionId);
+            $this->migrateWishlistToUser($userId, $sessionId);
 
             return response()->json([
                 'success' => true,

@@ -1,5 +1,13 @@
 import { defineStore } from 'pinia';
-import { apiClient, getAuthToken, setAuthToken, removeAuthToken } from '@/api/client';
+import {
+  apiClient,
+  getAuthToken,
+  setAuthToken,
+  removeAuthToken,
+  getCachedUser,
+  setCachedUser,
+  removeCachedUser,
+} from '@/api/client';
 import { useCartStore } from '@/stores/cart.store';
 import { useWishlistStore } from '@/stores/wishlist.store';
 import type { User } from '@/types';
@@ -10,6 +18,7 @@ interface AuthState {
   loading: boolean;
   initialized: boolean;
   error: string | null;
+  intendedRoute: string | null;
 }
 
 export const useAuthStore = defineStore('auth', {
@@ -19,11 +28,18 @@ export const useAuthStore = defineStore('auth', {
     loading: false,
     initialized: false,
     error: null,
+    intendedRoute: null,
   }),
 
   getters: {
     isAuthenticated: (state) => !!state.token && !!state.user,
-    userName: (state) => state.user?.name || 'Guest',
+    userName: (state) => {
+      if (!state.user) return 'Guest';
+      const u: any = state.user;
+      const combined = `${u.first_name || ''} ${u.last_name || ''}`.trim();
+      const name = (u.name && u.name !== 'Guest') ? u.name : (combined || u.username || 'Client');
+      return name || 'Guest';
+    },
     userEmail: (state) => state.user?.email || '',
   },
 
@@ -32,10 +48,18 @@ export const useAuthStore = defineStore('auth', {
       if (this.initialized) return;
       this.loading = true;
       try {
-        const storedToken = await getAuthToken();
+        const [storedToken, cachedUser] = await Promise.all([
+          getAuthToken(),
+          getCachedUser(),
+        ]);
         if (storedToken) {
           this.token = storedToken;
-          await this.fetchUser();
+          if (cachedUser) {
+            this.user = cachedUser;
+          }
+          await this.fetchUser().catch((fetchErr) => {
+            console.warn('Silent user refresh failed, continuing with cached session:', fetchErr);
+          });
         }
       } catch (err: any) {
         console.warn('Auth initialization error:', err);
@@ -49,12 +73,22 @@ export const useAuthStore = defineStore('auth', {
     async fetchUser() {
       try {
         const res = await apiClient.get<{ user: User }>('/v1/auth/user');
-        this.user = res.data.user || res.data;
+        const u = res.data.user || res.data;
+        if (u) {
+          const combined = `${(u as any).first_name || ''} ${(u as any).last_name || ''}`.trim();
+          if (!u.name || u.name === 'Guest') {
+            u.name = combined || (u as any).username || 'Client';
+          }
+        }
+        this.user = u;
+        await setCachedUser(u);
         return this.user;
       } catch (err: any) {
-        this.user = null;
-        this.token = null;
-        await removeAuthToken();
+        if (err.response?.status === 401) {
+          this.user = null;
+          this.token = null;
+          await Promise.all([removeAuthToken(), removeCachedUser()]);
+        }
         throw err;
       }
     },
@@ -67,7 +101,7 @@ export const useAuthStore = defineStore('auth', {
         const { token, user } = res.data;
         this.token = token;
         this.user = user;
-        await setAuthToken(token);
+        await Promise.all([setAuthToken(token), setCachedUser(user)]);
         
         // Task 4.4: Post-login guest cart and wishlist migration
         try {
@@ -106,7 +140,7 @@ export const useAuthStore = defineStore('auth', {
         const { token, user } = res.data;
         this.token = token;
         this.user = user;
-        await setAuthToken(token);
+        await Promise.all([setAuthToken(token), setCachedUser(user)]);
 
         // Task 4.4: Post-registration guest cart and wishlist migration
         try {
@@ -122,7 +156,13 @@ export const useAuthStore = defineStore('auth', {
 
         return user;
       } catch (err: any) {
-        this.error = err.response?.data?.message || 'Registration failed.';
+        const errData = err.response?.data;
+        if (errData?.errors && typeof errData.errors === 'object') {
+          const msgs = Object.values(errData.errors).flat().filter(Boolean);
+          this.error = msgs.join(' ') || errData.message || 'Registration failed.';
+        } else {
+          this.error = errData?.message || 'Registration failed.';
+        }
         throw err;
       } finally {
         this.loading = false;
@@ -177,6 +217,93 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
+    async updateProfile(payload: { first_name?: string; last_name?: string; phone?: string; username?: string }) {
+      this.loading = true;
+      this.error = null;
+      try {
+        const res = await apiClient.post<{ success: boolean; message?: string; user?: User }>('/v1/account/profile/update', payload);
+        if (this.user) {
+          if (payload.first_name !== undefined) (this.user as any).first_name = payload.first_name;
+          if (payload.last_name !== undefined) (this.user as any).last_name = payload.last_name;
+          if (payload.first_name || payload.last_name) {
+            this.user.name = `${(this.user as any).first_name || ''} ${(this.user as any).last_name || ''}`.trim() || this.user.name;
+          }
+          if (payload.phone !== undefined) this.user.phone = payload.phone;
+          if (payload.username !== undefined) (this.user as any).username = payload.username;
+          await setCachedUser(this.user);
+        }
+        return res.data;
+      } catch (err: any) {
+        this.error = err.response?.data?.message || 'Failed to update profile.';
+        throw err;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async updateAddress(payload: {
+      street: string;
+      region: string;
+      province?: string;
+      city: string;
+      barangay: string;
+      zip_code: string;
+    }) {
+      this.loading = true;
+      this.error = null;
+      try {
+        const res = await apiClient.post<{ success: boolean; message?: string; user?: User }>('/v1/account/address/update', payload);
+        if (this.user) {
+          this.user.street = payload.street;
+          this.user.region = payload.region;
+          this.user.province = payload.province || '';
+          this.user.city = payload.city;
+          this.user.barangay = payload.barangay;
+          this.user.zip_code = payload.zip_code;
+          await setCachedUser(this.user);
+        }
+        return res.data;
+      } catch (err: any) {
+        this.error = err.response?.data?.message || 'Failed to update address.';
+        throw err;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async changePassword(payload: { current_password: string; new_password: string; new_password_confirmation: string }) {
+      this.loading = true;
+      this.error = null;
+      try {
+        const res = await apiClient.post<{ success: boolean; message?: string }>('/v1/account/password/change', payload);
+        return res.data;
+      } catch (err: any) {
+        this.error = err.response?.data?.message || 'Failed to update password.';
+        throw err;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async handleOAuthCallback(token: string) {
+      this.loading = true;
+      this.token = token;
+      await setAuthToken(token);
+      try {
+        await this.fetchUser();
+        const cartStore = useCartStore();
+        const wishlistStore = useWishlistStore();
+        await Promise.allSettled([
+          cartStore.migrateGuestCart(),
+          wishlistStore.migrateGuestWishlist(),
+        ]);
+      } catch (err) {
+        console.warn('OAuth callback user fetch / migration warning:', err);
+      } finally {
+        this.loading = false;
+      }
+    },
+
     async logout() {
       this.loading = true;
       try {
@@ -187,7 +314,7 @@ export const useAuthStore = defineStore('auth', {
         this.user = null;
         this.token = null;
         this.error = null;
-        await removeAuthToken();
+        await Promise.all([removeAuthToken(), removeCachedUser()]);
         this.loading = false;
         
         // Refresh cart and wishlist for guest state
@@ -196,6 +323,34 @@ export const useAuthStore = defineStore('auth', {
           useWishlistStore().fetchWishlist();
         } catch (_) {}
       }
+    },
+
+    setIntendedRoute(route: string) {
+      this.intendedRoute = route;
+      try {
+        sessionStorage.setItem('eclore_intended_route', route);
+      } catch (_) {}
+    },
+
+    consumeIntendedRoute(defaultRoute = '/tabs/account'): string {
+      let route = this.intendedRoute;
+      if (!route) {
+        try {
+          route = sessionStorage.getItem('eclore_intended_route');
+        } catch (_) {}
+      }
+      this.intendedRoute = null;
+      try {
+        sessionStorage.removeItem('eclore_intended_route');
+      } catch (_) {}
+      return route || defaultRoute;
+    },
+
+    clearIntendedRoute() {
+      this.intendedRoute = null;
+      try {
+        sessionStorage.removeItem('eclore_intended_route');
+      } catch (_) {}
     },
   },
 });

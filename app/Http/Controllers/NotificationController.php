@@ -14,7 +14,7 @@ class NotificationController extends Controller
      */
     public function getUserNotifications(Request $request): JsonResponse
     {
-        $user = Auth::user();
+        $user = $request->user() ?? Auth::user();
         if (! $user) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
@@ -22,10 +22,11 @@ class NotificationController extends Controller
         $perPage = $request->get('per_page', 15);
 
         $notifications = Notification::where(function ($query) use ($user) {
-            $query->where('recipient_type', 'user')
-                ->where('recipient_id', $user->id);
+            $query->where(function ($sub) use ($user) {
+                $sub->where('recipient_type', 'user')
+                    ->where('recipient_id', $user->id);
+            })->orWhere('recipient_type', 'all');
         })
-            ->orWhere('recipient_type', 'all')
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
@@ -38,15 +39,15 @@ class NotificationController extends Controller
                 'total' => $notifications->total(),
                 'has_more' => $notifications->hasMorePages(),
             ],
-        ]);
+        ])->header('Cache-Control', 'private, max-age=10');
     }
 
     /**
      * Get unread notification count for the authenticated user.
      */
-    public function getUnreadCount(): JsonResponse
+    public function getUnreadCount(Request $request): JsonResponse
     {
-        $user = Auth::user();
+        $user = $request->user() ?? Auth::user();
         if (! $user) {
             return response()->json(['count' => 0]);
         }
@@ -61,7 +62,7 @@ class NotificationController extends Controller
             ->whereIn('status', ['pending', 'sent']) // Unread notifications have status 'pending' or 'sent'
             ->count();
 
-        return response()->json(['count' => $count]);
+        return response()->json(['count' => $count])->header('Cache-Control', 'private, max-age=10');
     }
 
     /**
@@ -69,17 +70,18 @@ class NotificationController extends Controller
      */
     public function markAsRead(Request $request, $id): JsonResponse
     {
-        $user = Auth::user();
+        $user = $request->user() ?? Auth::user();
         if (! $user) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
         $notification = Notification::where('id', $id)
             ->where(function ($query) use ($user) {
-                $query->where('recipient_type', 'user')
-                    ->where('recipient_id', $user->id);
+                $query->where(function ($sub) use ($user) {
+                    $sub->where('recipient_type', 'user')
+                        ->where('recipient_id', $user->id);
+                })->orWhere('recipient_type', 'all');
             })
-            ->orWhere('recipient_type', 'all')
             ->first();
 
         if (! $notification) {
@@ -94,18 +96,19 @@ class NotificationController extends Controller
     /**
      * Mark all notifications as read for the authenticated user.
      */
-    public function markAllAsRead(): JsonResponse
+    public function markAllAsRead(Request $request): JsonResponse
     {
-        $user = Auth::user();
+        $user = $request->user() ?? Auth::user();
         if (! $user) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
         $updated = Notification::where(function ($query) use ($user) {
-            $query->where('recipient_type', 'user')
-                ->where('recipient_id', $user->id);
+            $query->where(function ($sub) use ($user) {
+                $sub->where('recipient_type', 'user')
+                    ->where('recipient_id', $user->id);
+            })->orWhere('recipient_type', 'all');
         })
-            ->orWhere('recipient_type', 'all')
             ->whereIn('status', ['pending', 'sent']) // Mark both pending and sent as read
             ->update([
                 'status' => 'read',
@@ -124,17 +127,18 @@ class NotificationController extends Controller
      */
     public function deleteNotification(Request $request, $id): JsonResponse
     {
-        $user = Auth::user();
+        $user = $request->user() ?? Auth::user();
         if (! $user) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
         $notification = Notification::where('id', $id)
             ->where(function ($query) use ($user) {
-                $query->where('recipient_type', 'user')
-                    ->where('recipient_id', $user->id);
+                $query->where(function ($sub) use ($user) {
+                    $sub->where('recipient_type', 'user')
+                        ->where('recipient_id', $user->id);
+                })->orWhere('recipient_type', 'all');
             })
-            ->orWhere('recipient_type', 'all')
             ->first();
 
         if (! $notification) {
@@ -149,23 +153,20 @@ class NotificationController extends Controller
     /**
      * Clear all notifications for the authenticated user.
      */
-    public function clearAll(): JsonResponse
+    public function clearAll(Request $request): JsonResponse
     {
-        $user = Auth::user();
+        $user = $request->user() ?? Auth::user();
         if (! $user) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        $deleted = Notification::where(function ($query) use ($user) {
-            $query->where('recipient_type', 'user')
-                ->where('recipient_id', $user->id);
-        })
-            ->orWhere('recipient_type', 'all')
+        $deleted = Notification::where('recipient_type', 'user')
+            ->where('recipient_id', $user->id)
             ->delete();
 
         return response()->json([
             'success' => true,
-            'message' => 'All notifications cleared',
+            'message' => 'All personal notifications cleared',
             'deleted_count' => $deleted,
         ]);
     }

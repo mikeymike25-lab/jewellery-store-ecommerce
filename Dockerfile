@@ -33,6 +33,8 @@ RUN apt-get install -y \
     php8.2 \
     php8.2-cli \
     php8.2-mysql \
+    php8.2-pgsql \
+    php8.2-sqlite3 \
     php8.2-xml \
     php8.2-gd \
     php8.2-curl \

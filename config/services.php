@@ -51,4 +51,15 @@ return [
         'callback_token' => env('XENDIT_CALLBACK_TOKEN'),
         'environment' => env('XENDIT_ENV', 'test'), // test|live
     ],
+
+    // CARTO basemap service (optional for Boutiques page)
+    'carto' => [
+        'api_key' => env('CARTO_API_KEY'),
+    ],
+
+    // Google Gemini AI Concierge
+    'gemini' => [
+        'api_key' => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_MODEL', 'gemini-2.5-flash'),
+    ],
 ];

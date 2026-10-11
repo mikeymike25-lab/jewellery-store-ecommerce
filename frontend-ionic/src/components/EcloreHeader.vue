@@ -1,22 +1,24 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { useCartStore } from '@/stores/cart.store';
 import { useWishlistStore } from '@/stores/wishlist.store';
 import { useAuthStore } from '@/stores/auth.store';
+import { useNotificationsStore } from '@/stores/notifications.store';
 import SideMenuDrawer from '@/components/SideMenuDrawer.vue';
 import AuthModal from '@/components/AuthModal.vue';
+import NotificationsDrawer from '@/components/NotificationsDrawer.vue';
 
 const isSideMenuOpen = ref(false);
 const isAuthModalOpen = ref(false);
+const isNotificationsOpen = ref(false);
 
 const router = useRouter();
-const cartStore = useCartStore();
 const wishlistStore = useWishlistStore();
 const authStore = useAuthStore();
+const notificationsStore = useNotificationsStore();
 
-const cartCount = computed(() => cartStore.itemCount);
 const wishlistCount = computed(() => wishlistStore.itemCount);
+const unreadNotificationsCount = computed(() => notificationsStore.unreadCount);
 
 const emit = defineEmits<{
   (e: 'open-search'): void;
@@ -24,8 +26,36 @@ const emit = defineEmits<{
   (e: 'open-auth'): void;
 }>();
 
+onMounted(() => {
+  if (authStore.isAuthenticated) {
+    notificationsStore.fetchUnreadCount();
+  }
+});
+
+watch(
+  () => authStore.isAuthenticated,
+  (authed) => {
+    if (authed) {
+      notificationsStore.fetchUnreadCount(true);
+    }
+  }
+);
+
 function navigateTo(path: string) {
   router.push(path);
+}
+
+function handleWishlistClick() {
+  wishlistStore.toggleWishlistDrawer();
+}
+
+function handleNotificationsClick() {
+  if (!authStore.isAuthenticated) {
+    authStore.setIntendedRoute('/tabs/home');
+    isAuthModalOpen.value = true;
+    return;
+  }
+  isNotificationsOpen.value = true;
 }
 </script>
 
@@ -78,18 +108,24 @@ function navigateTo(path: string) {
         </router-link>
       </div>
 
-      <!-- Right: Action Icons (Account, Wishlist, Bag) -->
+      <!-- Right: Action Icons (Notifications & Wishlist) -->
       <div class="flex items-center space-x-4 sm:space-x-5">
-        <!-- Account Icon -->
+        <!-- Notification Bell Icon / Drawer Trigger -->
         <button
           type="button"
-          class="text-[#1A1A1A] hover:text-[#B6965D] transition-colors p-1"
-          aria-label="Account"
-          @click="authStore.isAuthenticated ? navigateTo('/account') : (isAuthModalOpen = true)"
+          class="relative text-[#1A1A1A] hover:text-[#B6965D] transition-colors p-1"
+          aria-label="Notifications"
+          @click="handleNotificationsClick"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
           </svg>
+          <span
+            v-if="unreadNotificationsCount > 0"
+            class="absolute -top-1 -right-1.5 bg-[#B6965D] text-white text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center font-azeret animate-pulse"
+          >
+            {{ unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount }}
+          </span>
         </button>
 
         <!-- Wishlist Icon / Drawer Trigger -->
@@ -97,7 +133,7 @@ function navigateTo(path: string) {
           type="button"
           class="relative text-[#1A1A1A] hover:text-[#B6965D] transition-colors p-1"
           aria-label="Favorites"
-          @click="wishlistStore.toggleWishlistDrawer()"
+          @click="handleWishlistClick"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
@@ -110,22 +146,16 @@ function navigateTo(path: string) {
           </span>
         </button>
 
-        <!-- Shopping Bag Trigger -->
+        <!-- Account Profile Icon Trigger -->
         <button
           type="button"
           class="relative text-[#1A1A1A] hover:text-[#B6965D] transition-colors p-1"
-          aria-label="Shopping bag"
-          @click="cartStore.toggleCart()"
+          aria-label="My Account"
+          @click="navigateTo('/tabs/account')"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25c-.67 0-1.19-.578-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119.993z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
           </svg>
-          <span
-            v-if="cartCount > 0"
-            class="absolute -top-1 -right-1.5 bg-[#B6965D] text-white text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center font-azeret"
-          >
-            {{ cartCount }}
-          </span>
         </button>
       </div>
     </div>
@@ -135,6 +165,12 @@ function navigateTo(path: string) {
       :is-open="isSideMenuOpen"
       @close="isSideMenuOpen = false"
       @open-search="emit('open-search')"
+    />
+
+    <!-- Notifications Drawer -->
+    <NotificationsDrawer
+      :is-open="isNotificationsOpen"
+      @close="isNotificationsOpen = false"
     />
 
     <!-- Luxury Auth Modal (Sign In / Sign Up / Forgot Password) -->

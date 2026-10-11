@@ -1,0 +1,174 @@
+{
+  "regions": [
+    { "code": "130000000", "name": "National Capital Region (NCR)", "region_name": "NCR" },
+    { "code": "040000000", "name": "Region IV-A (CALABARZON)", "region_name": "CALABARZON" },
+    { "code": "030000000", "name": "Region III (Central Luzon)", "region_name": "Central Luzon" },
+    { "code": "070000000", "name": "Region VII (Central Visayas)", "region_name": "Central Visayas" },
+    { "code": "110000000", "name": "Region XI (Davao Region)", "region_name": "Davao Region" },
+    { "code": "140000000", "name": "Cordillera Administrative Region (CAR)", "region_name": "CAR" },
+    { "code": "010000000", "name": "Region I (Ilocos Region)", "region_name": "Ilocos Region" },
+    { "code": "020000000", "name": "Region II (Cagayan Valley)", "region_name": "Cagayan Valley" },
+    { "code": "170000000", "name": "MIMAROPA Region", "region_name": "MIMAROPA" },
+    { "code": "050000000", "name": "Region V (Bicol Region)", "region_name": "Bicol Region" },
+    { "code": "060000000", "name": "Region VI (Western Visayas)", "region_name": "Western Visayas" },
+    { "code": "080000000", "name": "Region VIII (Eastern Visayas)", "region_name": "Eastern Visayas" },
+    { "code": "090000000", "name": "Region IX (Zamboanga Peninsula)", "region_name": "Zamboanga Peninsula" },
+    { "code": "100000000", "name": "Region X (Northern Mindanao)", "region_name": "Northern Mindanao" },
+    { "code": "120000000", "name": "Region XII (SOCCSKSARGEN)", "region_name": "SOCCSKSARGEN" },
+    { "code": "160000000", "name": "Region XIII (Caraga)", "region_name": "Caraga" },
+    { "code": "150000000", "name": "Bangsamoro Autonomous Region in Muslim Mindanao (BARMM)", "region_name": "BARMM" }
+  ],
+  "provinces": {
+    "040000000": [
+      { "code": "042100000", "name": "Cavite" },
+      { "code": "043400000", "name": "Laguna" },
+      { "code": "041000000", "name": "Batangas" },
+      { "code": "045800000", "name": "Rizal" },
+      { "code": "045600000", "name": "Quezon" }
+    ],
+    "030000000": [
+      { "code": "031400000", "name": "Bulacan" },
+      { "code": "035400000", "name": "Pampanga" },
+      { "code": "030800000", "name": "Bataan" },
+      { "code": "034900000", "name": "Nueva Ecija" },
+      { "code": "036900000", "name": "Tarlac" },
+      { "code": "037100000", "name": "Zambales" }
+    ],
+    "070000000": [
+      { "code": "072200000", "name": "Cebu" },
+      { "code": "071200000", "name": "Bohol" },
+      { "code": "074600000", "name": "Negros Oriental" }
+    ],
+    "110000000": [
+      { "code": "112400000", "name": "Davao del Sur" },
+      { "code": "112300000", "name": "Davao del Norte" },
+      { "code": "112500000", "name": "Davao Oriental" }
+    ],
+    "140000000": [
+      { "code": "141100000", "name": "Benguet" },
+      { "code": "140100000", "name": "Abra" },
+      { "code": "144400000", "name": "Mountain Province" }
+    ]
+  },
+  "cities": {
+    "130000000": [
+      { "code": "137602000", "name": "City of Makati", "type": "City" },
+      { "code": "137607000", "name": "City of Taguig", "type": "City" },
+      { "code": "137404000", "name": "Quezon City", "type": "City" },
+      { "code": "133900000", "name": "City of Manila", "type": "City" },
+      { "code": "137403000", "name": "City of Pasig", "type": "City" },
+      { "code": "137401000", "name": "City of Mandaluyong", "type": "City" },
+      { "code": "137405000", "name": "City of San Juan", "type": "City" },
+      { "code": "137605000", "name": "City of Pasay", "type": "City" },
+      { "code": "137604000", "name": "City of Parañaque", "type": "City" },
+      { "code": "137603000", "name": "City of Muntinlupa", "type": "City" },
+      { "code": "137601000", "name": "City of Las Piñas", "type": "City" },
+      { "code": "137402000", "name": "City of Marikina", "type": "City" },
+      { "code": "137501000", "name": "City of Caloocan", "type": "City" },
+      { "code": "137502000", "name": "City of Malabon", "type": "City" },
+      { "code": "137503000", "name": "City of Navotas", "type": "City" },
+      { "code": "137504000", "name": "City of Valenzuela", "type": "City" },
+      { "code": "137606000", "name": "Pateros", "type": "Municipality" }
+    ],
+    "042100000": [
+      { "code": "042103000", "name": "City of Bacoor", "type": "City" },
+      { "code": "042109000", "name": "City of Imus", "type": "City" },
+      { "code": "042106000", "name": "City of Dasmariñas", "type": "City" },
+      { "code": "042119000", "name": "City of Tagaytay", "type": "City" },
+      { "code": "042108000", "name": "City of General Trias", "type": "City" },
+      { "code": "042118000", "name": "Silang", "type": "Municipality" }
+    ],
+    "043400000": [
+      { "code": "043428000", "name": "City of Santa Rosa", "type": "City" },
+      { "code": "043405000", "name": "City of Calamba", "type": "City" },
+      { "code": "043403000", "name": "City of Biñan", "type": "City" },
+      { "code": "043404000", "name": "City of Cabuyao", "type": "City" },
+      { "code": "043425000", "name": "City of San Pedro", "type": "City" }
+    ],
+    "045800000": [
+      { "code": "045802000", "name": "City of Antipolo", "type": "City" },
+      { "code": "045805000", "name": "Cainta", "type": "Municipality" },
+      { "code": "045813000", "name": "Taytay", "type": "Municipality" },
+      { "code": "045801000", "name": "Angono", "type": "Municipality" }
+    ],
+    "031400000": [
+      { "code": "031420000", "name": "City of San Jose del Monte", "type": "City" },
+      { "code": "031410000", "name": "City of Malolos", "type": "City" },
+      { "code": "031412000", "name": "City of Meycauayan", "type": "City" }
+    ],
+    "035400000": [
+      { "code": "035401000", "name": "Angeles City", "type": "City" },
+      { "code": "035416000", "name": "City of San Fernando", "type": "City" },
+      { "code": "035409000", "name": "Mabalacat City", "type": "City" }
+    ],
+    "072200000": [
+      { "code": "072217000", "name": "Cebu City", "type": "City" },
+      { "code": "072230000", "name": "Mandaue City", "type": "City" },
+      { "code": "072226000", "name": "Lapu-Lapu City", "type": "City" }
+    ],
+    "112400000": [
+      { "code": "112402000", "name": "Davao City", "type": "City" }
+    ],
+    "141100000": [
+      { "code": "141102000", "name": "Baguio City", "type": "City" }
+    ]
+  },
+  "barangays": {
+    "137602000": [
+      { "code": "137602001", "name": "Bel-Air" },
+      { "code": "137602028", "name": "San Lorenzo" },
+      { "code": "137602011", "name": "Forbes Park" },
+      { "code": "137602024", "name": "Poblacion" },
+      { "code": "137602031", "name": "Urdaneta" },
+      { "code": "137602008", "name": "Dasmariñas" },
+      { "code": "137602027", "name": "San Antonio" },
+      { "code": "137602018", "name": "Magallanes" },
+      { "code": "137602023", "name": "Pio del Pilar" },
+      { "code": "137602021", "name": "Palanan" },
+      { "code": "137602002", "name": "Bangkal" },
+      { "code": "137602013", "name": "Guadalupe Nuevo" }
+    ],
+    "137607000": [
+      { "code": "137607006", "name": "Fort Bonifacio (BGC)" },
+      { "code": "137607028", "name": "Western Bicutan" },
+      { "code": "137607027", "name": "Ususan" },
+      { "code": "137607002", "name": "Bambang" },
+      { "code": "137607020", "name": "Tanyag" },
+      { "code": "137607001", "name": "Bagumbayan" }
+    ],
+    "137404000": [
+      { "code": "137404022", "name": "Diliman" },
+      { "code": "137404077", "name": "New Manila" },
+      { "code": "137404068", "name": "Loyola Heights" },
+      { "code": "137404018", "name": "Cubao (Socorro)" },
+      { "code": "137404008", "name": "Batasan Hills" },
+      { "code": "137404017", "name": "Commonwealth" },
+      { "code": "137404128", "name": "Tandang Sora" },
+      { "code": "137404052", "name": "Kamuning" }
+    ],
+    "133900000": [
+      { "code": "133900001", "name": "Ermita" },
+      { "code": "133900002", "name": "Malate" },
+      { "code": "133900003", "name": "Intramuros" },
+      { "code": "133900004", "name": "Binondo" },
+      { "code": "133900005", "name": "Santa Cruz" },
+      { "code": "133900006", "name": "Paco" },
+      { "code": "133900007", "name": "Sampaloc" },
+      { "code": "133900008", "name": "San Miguel" }
+    ],
+    "137403000": [
+      { "code": "137403023", "name": "San Antonio" },
+      { "code": "137403011", "name": "Kapitolyo" },
+      { "code": "137403029", "name": "Ugong" },
+      { "code": "137403001", "name": "Bagong Ilog" },
+      { "code": "137403017", "name": "Oranbo" }
+    ],
+    "default": [
+      { "code": "000000001", "name": "Barangay 1 (Poblacion)" },
+      { "code": "000000002", "name": "Barangay 2" },
+      { "code": "000000003", "name": "Barangay 3" },
+      { "code": "000000004", "name": "Central" },
+      { "code": "000000005", "name": "San Isidro" }
+    ]
+  }
+}

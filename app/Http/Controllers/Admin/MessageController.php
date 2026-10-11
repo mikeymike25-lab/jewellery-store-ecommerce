@@ -84,7 +84,7 @@ class MessageController extends Controller
             'status' => 'sometimes|in:new,read,responded,archived',
             'internal_notes' => 'sometimes|nullable|string|max:2000',
             'tags' => 'sometimes|nullable|array',
-            'assigned_to' => 'sometimes|nullable|exists:admins,id',
+            'assigned_to' => 'sometimes|nullable|exists:employees,id',
         ]);
 
         // Handle status changes
@@ -136,7 +136,7 @@ class MessageController extends Controller
     public function assign(Request $request, ContactMessage $message)
     {
         $request->validate([
-            'assigned_to' => 'required|exists:admins,id',
+            'assigned_to' => 'required|exists:employees,id',
         ]);
 
         $message->update(['assigned_to' => $request->assigned_to]);

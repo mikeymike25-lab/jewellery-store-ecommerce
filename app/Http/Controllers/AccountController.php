@@ -56,7 +56,11 @@ class AccountController extends Controller
 
     public function updateProfile(Request $request)
     {
-        $user = Auth::user();
+        $user = $request->user() ?: Auth::user();
+
+        if (! $user) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
 
         // Debug logging
         \Log::info('Profile update request', [
@@ -196,7 +200,11 @@ class AccountController extends Controller
 
     public function changePassword(Request $request)
     {
-        $user = Auth::user();
+        $user = $request->user() ?: Auth::user();
+
+        if (! $user) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
 
         // Build validation rules based on whether user has a password
         $validationRules = [
@@ -390,7 +398,11 @@ class AccountController extends Controller
 
     public function addAddress(Request $request)
     {
-        $user = Auth::user();
+        $user = $request->user() ?: Auth::user();
+
+        if (! $user) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
 
         $validator = Validator::make($request->all(), [
             'street' => 'required|string|max:255',
@@ -435,7 +447,11 @@ class AccountController extends Controller
 
     public function updateAddress(Request $request)
     {
-        $user = Auth::user();
+        $user = $request->user() ?: Auth::user();
+
+        if (! $user) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
 
         $validator = Validator::make($request->all(), [
             'street' => 'required|string|max:255',
@@ -479,7 +495,11 @@ class AccountController extends Controller
 
     public function archiveAccount(Request $request)
     {
-        $user = Auth::user();
+        $user = $request->user() ?: Auth::user();
+
+        if (! $user) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
 
         // For Google SSO users without password, require email instead
         $isGoogleSsoUser = $user->isSsoUser() && ! $user->hasPassword();
@@ -608,7 +628,7 @@ class AccountController extends Controller
 
     public function getOrders(Request $request)
     {
-        $user = Auth::user();
+        $user = $request->user() ?: Auth::user();
 
         if (! $user) {
             return response()->json(['error' => 'Unauthorized'], 401);
@@ -617,9 +637,14 @@ class AccountController extends Controller
         $page = $request->get('page', 1);
         $status = $request->get('status', null);
 
-        // Build query for user's orders
+        // Build query for user's orders with eager loading
         $query = Order::where('user_id', $user->id)
-            ->with('orderItems.product');
+            ->with([
+                'orderItems.product' => function ($q) {
+                    $q->withCount('approvedReviews as reviews_count')
+                      ->withAvg('approvedReviews as average_rating', 'rating');
+                },
+            ]);
 
         // Apply status filter if provided
         if ($status && $status !== 'all') {
@@ -630,12 +655,60 @@ class AccountController extends Controller
         $orders = $query->orderBy('created_at', 'desc')
             ->paginate(10, ['*'], 'page', $page);
 
-        $html = view('partials.orders-list', compact('orders'))->render();
+        // Only render heavy Blade HTML if specifically requested by legacy caller
+        $html = null;
+        if ($request->has('include_html') || (! $request->expectsJson() && ! $request->is('api/*'))) {
+            $html = view('partials.orders-list', compact('orders'))->render();
+        }
 
         return response()->json([
             'success' => true,
+            'orders' => $orders->items(),
+            'pagination' => [
+                'total' => $orders->total(),
+                'current_page' => $orders->currentPage(),
+                'last_page' => $orders->lastPage(),
+                'per_page' => $orders->perPage(),
+            ],
             'html' => $html,
         ]);
+    }
+
+    public function downloadReceiptPdf($requestOrOrderNumber, $orderNumber = null)
+    {
+        if ($requestOrOrderNumber instanceof Request) {
+            $request = $requestOrOrderNumber;
+        } else {
+            $orderNumber = $requestOrOrderNumber;
+            $request = request();
+        }
+
+        $user = $request->user() ?: Auth::user();
+
+        if (! $user) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 401);
+        }
+
+        $order = Order::where('order_number', $orderNumber)
+            ->where('user_id', $user->id)
+            ->with(['orderItems.product'])
+            ->first();
+
+        if (! $order) {
+            return response()->json(['success' => false, 'message' => 'Order not found.'], 404);
+        }
+
+        if ($order->payment_status !== 'paid') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Official tax receipt is only available for paid orders.',
+            ], 403);
+        }
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('receipt-pdf', compact('order', 'user'))
+            ->setPaper('a4', 'portrait');
+
+        return $pdf->download("eclore-receipt-{$order->order_number}.pdf");
     }
 
     public function viewReceipt($orderNumber)

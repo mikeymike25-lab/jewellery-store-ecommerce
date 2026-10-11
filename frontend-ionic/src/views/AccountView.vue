@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { IonPage, IonContent } from '@ionic/vue';
+import { IonPage, IonContent, onIonViewWillEnter } from '@ionic/vue';
 import EcloreHeader from '@/components/EcloreHeader.vue';
 import EcloreFooter from '@/components/EcloreFooter.vue';
 import EcloreButton from '@/components/EcloreButton.vue';
+import AccountTab from '@/views/AccountTab.vue';
 import { useAuthStore } from '@/stores/auth.store';
+import { useOrdersStore } from '@/stores/orders.store';
 
 const authStore = useAuthStore();
+const ordersStore = useOrdersStore();
 const route = useRoute();
 const router = useRouter();
 
@@ -38,8 +41,16 @@ async function handleLogin() {
       email: loginLogin.value.trim(),
       password: loginPassword.value,
     });
+    const intended = authStore.consumeIntendedRoute();
+    if (intended) {
+      router.push(intended);
+    }
   } catch (err: any) {
-    generalError.value = err.response?.data?.message || 'Invalid credentials. Please verify your email or password.';
+    if (!err.response) {
+      generalError.value = `Unable to connect to the server (${import.meta.env.VITE_API_BASE_URL || 'API'}). Please ensure your device is connected to the same Wi-Fi and the backend server is reachable.`;
+    } else {
+      generalError.value = err.response?.data?.message || 'Invalid credentials. Please verify your email or password.';
+    }
   }
 }
 
@@ -67,7 +78,19 @@ function handleUsernameInput() {
   clearTimeout(usernameCheckTimer);
 
   const clean = signupUsername.value.trim();
-  if (clean.length < 3) return;
+  if (clean.length === 0) return;
+
+  if (clean.length < 3) {
+    usernameError.value = 'Username must be at least 3 characters';
+    isUsernameAvailable.value = false;
+    return;
+  }
+
+  if (/[^a-zA-Z0-9_]/.test(clean)) {
+    usernameError.value = 'Letters, numbers, and underscores only (no @ or symbols)';
+    isUsernameAvailable.value = false;
+    return;
+  }
 
   usernameCheckTimer = setTimeout(async () => {
     isCheckingUsername.value = true;
@@ -118,11 +141,13 @@ const passwordsMatch = computed(() => {
 });
 
 const isSignupValid = computed(() => {
+  const username = signupUsername.value.trim();
   return (
     firstName.value.trim().length > 0 &&
     lastName.value.trim().length > 0 &&
     signupEmail.value.includes('@') &&
-    signupUsername.value.trim().length >= 3 &&
+    username.length >= 3 &&
+    /^[a-zA-Z0-9_]+$/.test(username) &&
     isUsernameAvailable.value !== false &&
     ruleLength.value &&
     passwordsMatch.value === true &&
@@ -143,8 +168,18 @@ async function handleRegister() {
       password: signupPassword.value,
       password_confirmation: confirmPassword.value,
     });
+    const intended = authStore.consumeIntendedRoute();
+    if (intended) {
+      router.push(intended);
+    }
   } catch (err: any) {
-    generalError.value = err.response?.data?.message || 'Registration failed. Please review your information.';
+    const errorData = err.response?.data;
+    if (errorData?.errors && typeof errorData.errors === 'object') {
+      const messages = Object.values(errorData.errors).flat().filter(Boolean);
+      generalError.value = (messages as string[]).join(' ') || errorData.message || 'Registration failed.';
+    } else {
+      generalError.value = errorData?.message || authStore.error || 'Registration failed. Please review your information.';
+    }
   }
 }
 
@@ -190,17 +225,20 @@ async function handleResetPassword() {
   }
 }
 
-// ====================================================
-// Authenticated User State
-// ====================================================
-async function handleLogout() {
-  await authStore.logout();
-  router.push('/');
-}
-
 // Sync mode with route query params
-function initFromRoute() {
-  if (route.query.mode === 'signup') {
+async function initFromRoute() {
+  if (route.query.auth_token || (route.query.token && String(route.query.token).includes('|'))) {
+    const token = String(route.query.auth_token || route.query.token);
+    try {
+      await authStore.handleOAuthCallback(token);
+      router.replace({ path: '/tabs/account', query: {} });
+      successMessage.value = 'Welcome back to Maison Éclore.';
+    } catch (err: any) {
+      generalError.value = 'Authentication verification failed. Please try signing in again.';
+    }
+  } else if (route.query.error) {
+    generalError.value = decodeURIComponent(String(route.query.error));
+  } else if (route.query.mode === 'signup') {
     activeMode.value = 'signup';
   } else if (route.query.mode === 'forgot') {
     activeMode.value = 'forgot';
@@ -219,6 +257,16 @@ onMounted(() => {
   authStore.init();
   initFromRoute();
 });
+
+onIonViewWillEnter(async () => {
+  await authStore.init();
+  if (authStore.isAuthenticated) {
+    await Promise.allSettled([
+      authStore.fetchUser(),
+      ordersStore.fetchOrders(1),
+    ]);
+  }
+});
 </script>
 
 <template>
@@ -227,24 +275,14 @@ onMounted(() => {
       <div class="min-h-screen flex flex-col bg-[#F3EFE7] text-[#1A1A1A]">
         <EcloreHeader />
 
-        <main class="flex-grow max-w-2xl mx-auto px-4 py-12 sm:py-16 w-full">
+        <main
+          class="flex-grow mx-auto px-4 py-10 sm:py-14 w-full"
+          :class="authStore.isAuthenticated ? 'max-w-4xl' : 'max-w-2xl'"
+        >
           <!-- ---------------------------------------------------- -->
-          <!-- AUTHENTICATED STATE: Atelier Profile -->
+          <!-- AUTHENTICATED STATE: Atelier Customer Portal (Stage 6) -->
           <!-- ---------------------------------------------------- -->
-          <div v-if="authStore.isAuthenticated" class="bg-white border border-[#E2DDD5] p-6 sm:p-8 space-y-6 shadow-sm">
-            <div class="border-b border-[#E2DDD5] pb-4">
-              <span class="font-azeret text-[10px] uppercase tracking-widest text-[#B6965D]">Atelier Profile</span>
-              <h1 class="font-playfair text-2xl sm:text-3xl text-[#1A1A1A] mt-1">{{ authStore.userName }}</h1>
-              <p class="font-azeret text-xs text-[#767676] mt-0.5">{{ authStore.userEmail }}</p>
-            </div>
-
-            <div class="pt-4 flex justify-between items-center">
-              <span class="font-azeret text-xs text-stone-500">Authenticated Maison Client</span>
-              <EcloreButton variant="outline" size="sm" @click="handleLogout">
-                Sign Out
-              </EcloreButton>
-            </div>
-          </div>
+          <AccountTab v-if="authStore.isAuthenticated" />
 
           <!-- ---------------------------------------------------- -->
           <!-- UNAUTHENTICATED STATE: Client Portal (Sign In / Sign Up / Forgot) -->

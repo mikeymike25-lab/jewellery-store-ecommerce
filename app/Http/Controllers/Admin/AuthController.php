@@ -100,7 +100,10 @@ class AuthController extends Controller
             }
 
             if ($request->expectsJson()) {
-                return response()->json(['message' => 'Verification code sent to your email']);
+                return response()->json([
+                    'message' => 'Verification code sent to your email',
+                    'requires_otp' => true,
+                ]);
             }
 
             return redirect()->to(admin_route('verify-otp'))
@@ -117,6 +120,13 @@ class AuthController extends Controller
         AuditLog::logLogin($admin);
 
         $request->session()->regenerate();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Welcome back, '.$admin->first_name.'!',
+                'redirect' => admin_route('dashboard'),
+            ]);
+        }
 
         return redirect()->intended(admin_route('dashboard'))
             ->with('success', 'Welcome back, '.$admin->first_name.'!');

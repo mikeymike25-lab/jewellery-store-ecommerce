@@ -1,0 +1,96 @@
+/**
+ * Éclore Luxury Jewellery - Design System Tokens & Ionic Theme
+ */
+
+:root {
+  /* Éclore Brand Palette */
+  --eclore-bg: #F3EFE7;
+  --eclore-bg-subtle: #EBE6DC;
+  --eclore-gold: #B6965D;
+  --eclore-gold-hover: #9A7E4D;
+  --eclore-gold-active: #846B40;
+  --eclore-gold-light: #F7F3EB;
+  --eclore-dark: #1A1A1A;
+  --eclore-dark-muted: #4A4A4A;
+  --eclore-gray: #767676;
+  --eclore-border: #E2DDD5;
+  --eclore-border-gold: #D4CEB8;
+  --eclore-white: #FFFFFF;
+
+  /* Typography */
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-mono: 'Azeret Mono', Menlo, Monaco, monospace;
+
+  /* Ionic Theme Customizations */
+  --ion-background-color: var(--eclore-bg);
+  --ion-text-color: var(--eclore-dark);
+  --ion-font-family: var(--font-mono);
+
+  /* Primary Color = Éclore Gold */
+  --ion-color-primary: #B6965D;
+  --ion-color-primary-rgb: 182, 150, 93;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #a08452;
+  --ion-color-primary-tint: #bda16d;
+
+  /* Dark = Éclore Charcoal/Black */
+  --ion-color-dark: #1A1A1A;
+  --ion-color-dark-rgb: 26, 26, 26;
+  --ion-color-dark-contrast: #ffffff;
+  --ion-color-dark-contrast-rgb: 255, 255, 255;
+  --ion-color-dark-shade: #171717;
+  --ion-color-dark-tint: #313131;
+
+  /* Light = Subtle Linen */
+  --ion-color-light: #EBE6DC;
+  --ion-color-light-rgb: 235, 230, 220;
+  --ion-color-light-contrast: #1A1A1A;
+  --ion-color-light-contrast-rgb: 26, 26, 26;
+  --ion-color-light-shade: #cfcac2;
+  --ion-color-light-tint: #ede9e0;
+
+  /* Toolbars, Tab Bars and Modals */
+  --ion-toolbar-background: var(--eclore-bg);
+  --ion-toolbar-color: var(--eclore-dark);
+  --ion-toolbar-border-color: var(--eclore-border);
+  --ion-tab-bar-background: var(--eclore-bg);
+  --ion-tab-bar-color: #8C8C8C;
+  --ion-tab-bar-color-selected: var(--eclore-gold);
+  --ion-item-background: transparent;
+}
+
+/* Utility Font Classes */
+.font-playfair {
+  font-family: var(--font-serif) !important;
+}
+
+.font-azeret {
+  font-family: var(--font-mono) !important;
+}
+
+/* Luxury Card & Button Accents */
+.eclore-gold-btn {
+  background-color: var(--eclore-gold);
+  color: #FFFFFF;
+  transition: all 0.25s ease;
+}
+
+.eclore-gold-btn:hover {
+  background-color: var(--eclore-gold-hover);
+}
+
+.eclore-gold-btn:active {
+  background-color: var(--eclore-gold-active);
+}
+
+.eclore-border-card {
+  border: 1px solid var(--eclore-border);
+  background-color: #FFFFFF;
+}
+
+.eclore-badge {
+  background-color: rgba(243, 239, 231, 0.9);
+  border: 1px solid var(--eclore-border-gold);
+  color: var(--eclore-dark);
+}

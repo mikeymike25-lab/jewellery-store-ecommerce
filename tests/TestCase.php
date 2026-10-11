@@ -13,8 +13,6 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
-        // Ensure we're using the test database
-        config(['database.default' => 'mysql']);
-        config(['database.connections.mysql.database' => 'davids_wood_test']);
+
     }
 }

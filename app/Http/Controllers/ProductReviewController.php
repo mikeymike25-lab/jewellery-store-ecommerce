@@ -26,6 +26,20 @@ class ProductReviewController extends Controller
             ], 401);
         }
 
+        // Auto-resolve order_id from customer purchase history if omitted
+        if (! $request->filled('order_id')) {
+            $userOrder = Order::where('user_id', $user->id)
+                ->whereHas('orderItems', function ($query) use ($request) {
+                    $query->where('product_id', $request->product_id);
+                })
+                ->latest()
+                ->first();
+
+            if ($userOrder) {
+                $request->merge(['order_id' => $userOrder->id]);
+            }
+        }
+
         $validator = Validator::make($request->all(), [
             'product_id' => 'required|exists:products,id',
             'order_id' => 'required|exists:orders,id',
@@ -53,7 +67,7 @@ class ProductReviewController extends Controller
         if (! $order) {
             return response()->json([
                 'success' => false,
-                'message' => 'You can only review products you have purchased',
+                'message' => 'You can only review creations you have verified purchases for.',
             ], 403);
         }
 
@@ -100,19 +114,28 @@ class ProductReviewController extends Controller
      */
     public function index($productId)
     {
-        $product = Product::findOrFail($productId);
+        $product = is_numeric($productId)
+            ? Product::find($productId)
+            : Product::where('slug', $productId)->first();
 
-        $reviews = ProductReview::where('product_id', $productId)
+        if (! $product) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Product not found',
+            ], 404);
+        }
+
+        $reviews = ProductReview::where('product_id', $product->id)
             ->where('is_approved', true)
-            ->with('user')
+            ->with('user:id,name')
             ->orderBy('created_at', 'desc')
             ->paginate(10);
 
         return response()->json([
             'success' => true,
             'reviews' => $reviews,
-            'average_rating' => $product->average_rating,
-            'total_reviews' => $product->reviews_count,
+            'average_rating' => (float) ($product->average_rating ?? 5.0),
+            'total_reviews' => (int) ($product->reviews_count ?? $reviews->total()),
         ]);
     }
 }

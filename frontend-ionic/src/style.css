@@ -1,0 +1,412 @@
+/* Core Ionic CSS - loaded first as base styles */
+@import "@ionic/vue/css/core.css";
+@import "@ionic/vue/css/normalize.css";
+@import "@ionic/vue/css/structure.css";
+@import "@ionic/vue/css/typography.css";
+@import "@ionic/vue/css/padding.css";
+@import "@ionic/vue/css/float-elements.css";
+@import "@ionic/vue/css/text-alignment.css";
+@import "@ionic/vue/css/text-transformation.css";
+@import "@ionic/vue/css/flex-utils.css";
+@import "@ionic/vue/css/display.css";
+
+@import "tailwindcss";
+@import "./theme/variables.css";
+
+/* Luxury styling reset */
+*, *::before, *::after {
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+html, body {
+  background-color: var(--eclore-bg);
+  color: var(--eclore-dark);
+  font-family: var(--font-mono);
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+ion-content {
+  --background: var(--eclore-bg);
+  --color: var(--eclore-dark);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--eclore-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D4CEB8;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--eclore-gold);
+}
+
+/* Global Button & Input Ergonomics (Touch Target Guarantee) */
+button {
+  font-family: inherit;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input, select, textarea {
+  box-sizing: border-box;
+}
+
+/* Explicit button padding rules to guarantee consistent left/right spacing in all WebViews */
+button.px-8 {
+  padding-left: 2rem !important;
+  padding-right: 2rem !important;
+}
+
+button.px-10 {
+  padding-left: 2.5rem !important;
+  padding-right: 2.5rem !important;
+}
+
+button.px-6 {
+  padding-left: 1.5rem !important;
+  padding-right: 1.5rem !important;
+}
+
+button.px-5 {
+  padding-left: 1.25rem !important;
+  padding-right: 1.25rem !important;
+}
+
+button.px-4 {
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+}
+
+button.py-4 {
+  padding-top: 1rem !important;
+  padding-bottom: 1rem !important;
+}
+
+button.py-3\.5 {
+  padding-top: 0.875rem !important;
+  padding-bottom: 0.875rem !important;
+}
+
+button.py-3 {
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
+}
+
+button.py-2\.5 {
+  padding-top: 0.625rem !important;
+  padding-bottom: 0.625rem !important;
+}
+
+/* Luxury Brand CTA Button Helper */
+.eclore-cta-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 14px 32px !important;
+  min-height: 48px !important;
+  text-align: center !important;
+  box-sizing: border-box !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+
+/* ==========================================================================
+   Éclore Luxury Animation System (GPU Accelerated, 60fps Safe)
+   ========================================================================== */
+
+/* 1. Sparkle Star Animation (Add to Bag Success) */
+@keyframes sparkleAnimation {
+  0% {
+    opacity: 0;
+    transform: scale3d(0, 0, 1) rotate(0deg);
+  }
+  20% {
+    opacity: 1;
+    transform: scale3d(1, 1, 1) rotate(72deg);
+  }
+  40% {
+    opacity: 1;
+    transform: scale3d(1.25, 1.25, 1) rotate(144deg);
+  }
+  60% {
+    opacity: 1;
+    transform: scale3d(1, 1, 1) rotate(216deg);
+  }
+  80% {
+    opacity: 0.8;
+    transform: scale3d(0.8, 0.8, 1) rotate(288deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale3d(0, 0, 1) rotate(360deg);
+  }
+}
+
+.animate-sparkle {
+  animation: sparkleAnimation 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+  pointer-events: none;
+}
+
+/* 2. Scroll Line Pulse (Hero & Heritage Section) */
+@keyframes scrollLine {
+  0% {
+    transform: scaleY(0);
+    transform-origin: top;
+  }
+  50% {
+    transform: scaleY(1);
+    transform-origin: top;
+  }
+  51% {
+    transform: scaleY(1);
+    transform-origin: bottom;
+  }
+  100% {
+    transform: scaleY(0);
+    transform-origin: bottom;
+  }
+}
+
+.animate-scroll-line {
+  animation: scrollLine 2.2s infinite ease-in-out;
+  will-change: transform;
+}
+
+/* 3. Circular Atelier Badge / Seal Rotation */
+@keyframes rotateText {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-rotate-text {
+  animation: rotateText 22s linear infinite;
+  will-change: transform;
+}
+
+/* 4. Infinite Luxury Lifestyle Marquee (VIP Club) */
+@keyframes marquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 35s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* 5. Checkout & Processing Spinners */
+@keyframes checkout-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-luxury {
+  animation: checkout-spin 0.9s linear infinite;
+  will-change: transform;
+}
+
+/* 6. Toast / Notification Slide In */
+@keyframes toastSlideIn {
+  from {
+    transform: translate3d(100%, 0, 0);
+    opacity: 0;
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+.animate-toast-in {
+  animation: toastSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* 7. Staggered Scroll & Section Entrance Animations */
+@keyframes ecloreFadeUp {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 20px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes ecloreFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ecloreZoomIn {
+  from {
+    opacity: 0;
+    transform: scale3d(0.96, 0.96, 1);
+  }
+  to {
+    opacity: 1;
+    transform: scale3d(1, 1, 1);
+  }
+}
+
+.animate-fade-up {
+  animation: ecloreFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-fade-in {
+  animation: ecloreFadeIn 0.5s ease both;
+}
+
+.animate-zoom-in {
+  animation: ecloreZoomIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Delays for staggered presentation */
+.animation-delay-100 { animation-delay: 100ms; }
+.animation-delay-200 { animation-delay: 200ms; }
+.animation-delay-300 { animation-delay: 300ms; }
+.animation-delay-400 { animation-delay: 400ms; }
+.animation-delay-500 { animation-delay: 500ms; }
+
+/* 8. Vue Drawer (Offcanvas) Transitions */
+.drawer-slide-enter-active,
+.drawer-slide-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.drawer-slide-enter-active aside,
+.drawer-slide-leave-active aside {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.drawer-slide-enter-from,
+.drawer-slide-leave-to {
+  opacity: 0;
+}
+
+.drawer-slide-enter-from aside,
+.drawer-slide-leave-to aside {
+  transform: translate3d(100%, 0, 0);
+}
+
+/* 9. Vue Modal Scale & Fade Transitions */
+.modal-luxury-enter-active,
+.modal-luxury-leave-active {
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-luxury-enter-active .modal-card,
+.modal-luxury-leave-active .modal-card {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease;
+  will-change: transform, opacity;
+}
+
+.modal-luxury-enter-from,
+.modal-luxury-leave-to {
+  opacity: 0;
+}
+
+.modal-luxury-enter-from .modal-card,
+.modal-luxury-leave-to .modal-card {
+  opacity: 0;
+  transform: scale3d(0.95, 0.95, 1) translate3d(0, 10px, 0);
+}
+
+/* 10. High-End Micro-Interactions */
+.gold-curtain-btn {
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.gold-curtain-btn::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0;
+  background-color: var(--eclore-gold);
+  transition: height 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: -1;
+}
+
+.gold-curtain-btn:hover::before {
+  height: 100%;
+}
+
+.btn-wishlist-bounce:active {
+  transform: scale3d(1.25, 1.25, 1);
+  transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* 11. Product List Smooth Scroll & Card Entrance System */
+@keyframes ecloreCardEntrance {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.product-card-scroll {
+  animation: ecloreCardEntrance 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transition: border-color 0.35s ease, box-shadow 0.45s ease;
+}
+
+/* Smooth Scroll Helper for IonContent */
+ion-content {
+  --scroll-behavior: smooth;
+}
+
+/* Accessibility: Respect Reduced Motion Preferences */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .product-card-scroll {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}

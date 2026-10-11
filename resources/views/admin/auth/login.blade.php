@@ -29,19 +29,37 @@
                     this.successMessage = '';
                     
                     try {
-                        const formData = new FormData(document.getElementById('login-form'));
-                        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                        const form = document.getElementById('login-form');
+                        const formData = new FormData(form);
+                        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || form.querySelector('input[name="_token"]')?.value;
                         
                         const response = await fetch('{{ admin_route("login") }}', {
                             method: 'POST',
                             body: formData,
+                            credentials: 'include',
                             headers: {
                                 'X-CSRF-TOKEN': csrfToken,
                                 'Accept': 'application/json'
                             }
                         });
                         
-                        if (response.ok) {
+                        let data = {};
+                        try {
+                            data = await response.json();
+                        } catch (e) {
+                            data = {};
+                        }
+
+                        if (!response.ok) {
+                            if (response.status === 419) {
+                                this.errorMessage = 'Session expired. Refreshing page...';
+                                setTimeout(() => window.location.reload(), 800);
+                                return;
+                            }
+                            this.errorMessage = data.message || data.errors?.email?.[0] || 'Failed to sign in. Please try again.';
+                        } else if (data.redirect) {
+                            window.location.href = data.redirect;
+                        } else if (data.requires_otp) {
                             // Delay showing OTP form to let login form slide out first
                             setTimeout(() => {
                                 this.showOtpForm = true;
@@ -54,8 +72,7 @@
                                 });
                             }, 300); // 300ms delay to match transition duration
                         } else {
-                            const data = await response.json();
-                            this.errorMessage = data.message || data.errors?.email?.[0] || 'Failed to send OTP. Please try again.';
+                            this.errorMessage = 'Sign-in response was unexpected. Please try again.';
                         }
                     } catch (error) {
                         console.error('Login error:', error);
@@ -72,9 +89,10 @@
                     try {
                         const response = await fetch('{{ admin_route("verify-otp.post") }}', {
                             method: 'POST',
+                            credentials: 'include',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
                                 'Accept': 'application/json'
                             },
                             body: JSON.stringify({ code: this.otpCode })
@@ -83,7 +101,12 @@
                         if (response.ok) {
                             window.location.href = '{{ admin_route("dashboard") }}';
                         } else {
-                            const data = await response.json();
+                            let data = {};
+                            try {
+                                data = await response.json();
+                            } catch (e) {
+                                data = {};
+                            }
                             this.errorMessage = data.message || 'Invalid verification code.';
                         }
                     } catch (error) {
@@ -100,8 +123,9 @@
                     try {
                         const response = await fetch('{{ admin_route("resend-otp") }}', {
                             method: 'POST',
+                            credentials: 'include',
                             headers: {
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
                                 'Accept': 'application/json'
                             }
                         });
@@ -291,7 +315,7 @@
                                      x-transition:leave-start="opacity-100 transform translate-x-0" 
                                      x-transition:leave-end="opacity-0 transform -translate-x-full"
                                      class="w-full bg-transparent">
-                                <form id="login-form" @submit.prevent="sendOtp()">
+                                <form id="login-form" @submit.prevent="sendOtp()" action="{{ admin_route('login') }}" method="POST">
                                 @csrf
                                 <div class="space-y-5">
                                     <!-- Email -->
@@ -369,9 +393,9 @@
                                                 :disabled="isLoading"
                                                 class="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-sm hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                                <i data-lucide="mail" class="w-4 h-4 mr-2" x-show="!isLoading"></i>
+                                                <i data-lucide="log-in" class="w-4 h-4 mr-2" x-show="!isLoading"></i>
                                                 <i data-lucide="loader-2" class="w-4 h-4 mr-2 animate-spin" x-show="isLoading"></i>
-                                                <span x-text="isLoading ? 'Sending...' : 'Send OTP'"></span>
+                                                <span x-text="isLoading ? 'Signing In...' : 'Sign In'"></span>
                                         </button>
                                     </div>
                                 </div>

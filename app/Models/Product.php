@@ -94,6 +94,12 @@ class Product extends Model
     protected $appends = [
         'average_rating',
         'reviews_count',
+        'primary_image',
+        'image_url',
+        'base_price',
+        'final_price',
+        'is_on_sale',
+        'current_price',
     ];
 
     public function category(): BelongsTo
@@ -111,15 +117,30 @@ class Product extends Model
         return $this->hasMany(WishlistItem::class);
     }
 
-    public function getCurrentPriceAttribute()
+    public function getBasePriceAttribute(): float
     {
-        return $this->sale_price ?? $this->price;
+        return (float) ($this->price ?? 0);
     }
 
-    public function getDiscountPercentageAttribute()
+    public function getFinalPriceAttribute(): float
     {
-        if ($this->sale_price && $this->sale_price < $this->price) {
-            return round((($this->price - $this->sale_price) / $this->price) * 100);
+        return (float) ($this->sale_price ?? $this->price ?? 0);
+    }
+
+    public function getIsOnSaleAttribute(): bool
+    {
+        return !is_null($this->sale_price) && (float) $this->sale_price < (float) $this->price;
+    }
+
+    public function getCurrentPriceAttribute(): float
+    {
+        return (float) ($this->sale_price ?? $this->price ?? 0);
+    }
+
+    public function getDiscountPercentageAttribute(): int
+    {
+        if ($this->sale_price && (float) $this->sale_price < (float) $this->price && (float) $this->price > 0) {
+            return (int) round((((float) $this->price - (float) $this->sale_price) / (float) $this->price) * 100);
         }
 
         return 0;
@@ -265,12 +286,53 @@ class Product extends Model
     // Get average rating
     public function getAverageRatingAttribute(): float
     {
-        return round($this->approvedReviews()->avg('rating') ?? 0, 1);
+        if (array_key_exists('average_rating', $this->attributes)) {
+            return round((float) ($this->attributes['average_rating'] ?? 5.0), 1);
+        }
+
+        return round((float) ($this->approvedReviews()->avg('rating') ?? 5.0), 1);
     }
 
     // Get total reviews count
     public function getReviewsCountAttribute(): int
     {
-        return $this->approvedReviews()->count();
+        if (array_key_exists('reviews_count', $this->attributes) && $this->attributes['reviews_count'] !== null) {
+            return (int) $this->attributes['reviews_count'];
+        }
+
+        return (int) $this->approvedReviews()->count();
+    }
+
+    // Get primary image URL
+    public function getImageUrlAttribute(): ?string
+    {
+        if (is_array($this->images) && count($this->images) > 0) {
+            $img = $this->images[0];
+            if (!empty($img) && !str_contains($img, 'placehold.co')) {
+                return $img;
+            }
+        }
+
+        if (is_array($this->gallery) && count($this->gallery) > 0) {
+            $img = $this->gallery[0];
+            if (!empty($img) && !str_contains($img, 'placehold.co')) {
+                return $img;
+            }
+        }
+
+        $prefixMap = [
+            1 => '/assets/products/ring-1.jpg',
+            2 => '/assets/products/necklace-1.jpg',
+            3 => '/assets/products/earring-1.jpg',
+            4 => '/assets/products/bracelet-1.jpg',
+            5 => '/assets/products/timepiece-1.jpg',
+        ];
+
+        return $prefixMap[$this->category_id] ?? '/assets/ring.webp';
+    }
+
+    public function getPrimaryImageAttribute(): ?string
+    {
+        return $this->image_url;
     }
 }

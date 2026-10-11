@@ -14,12 +14,17 @@ class ContactController extends Controller
      */
     public function store(Request $request)
     {
+        $input = $request->all();
+        if (empty($input['name']) && (!empty($input['first_name']) || !empty($input['last_name']))) {
+            $input['name'] = trim(($input['first_name'] ?? '') . ' ' . ($input['last_name'] ?? ''));
+        }
+
         // Validate the request
-        $validated = $request->validate([
+        $validated = \Illuminate\Support\Facades\Validator::make($input, [
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
             'message' => 'required|string|max:5000',
-        ]);
+        ])->validate();
 
         try {
             // Create the contact message

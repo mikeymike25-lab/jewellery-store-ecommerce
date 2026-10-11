@@ -23,8 +23,9 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\SyncWishlistSession::class,
         ]);
 
-        // Register admin middleware
+        // Register admin and API middleware
         $middleware->alias([
+            'guest.header' => \App\Http\Middleware\HandleGuestSessionHeader::class,
             'admin' => \App\Http\Middleware\AdminAuth::class,
             'admin.subdomain' => \App\Http\Middleware\AdminSubdomainMiddleware::class,
             'admin.permission' => \App\Http\Middleware\CheckAdminPermission::class,
@@ -34,20 +35,21 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Exclude CSRF from specific routes
         $middleware->validateCsrfTokens(except: [
-            'api/cart/*',
-            'api/wishlist/*',
-            'api/products/*',
-            'api/check-username/*',
+            'api/*',
             'webhooks/xendit', // Xendit webhook - external service cannot provide CSRF token
         ]);
 
-        // Add CORS middleware to API routes
+        // Add CORS and Guest Session middleware to API routes
         $middleware->api(prepend: [
             \Illuminate\Http\Middleware\HandleCors::class,
+        ]);
+        $middleware->api(append: [
+            \App\Http\Middleware\HandleGuestSessionHeader::class,
         ]);
 
         // Add CORS middleware to web routes for cart/wishlist API endpoints
         $middleware->web(prepend: [
+            \App\Http\Middleware\AdminSessionCookie::class,
             \Illuminate\Http\Middleware\HandleCors::class,
             \App\Http\Middleware\HandleMethodOverride::class,
             // \App\Http\Middleware\ForceHttps::class, // Temporarily disabled for testing

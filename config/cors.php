@@ -21,9 +21,21 @@ return [
     'allowed_origins' => [
         'http://127.0.0.1:8080',
         'http://localhost:8080',
+        'http://localhost:8100',
+        'http://127.0.0.1:8100',
+        'capacitor://localhost',
+        'ionic://localhost',
+        'https://localhost',
+        'http://localhost',
+        'http://10.0.2.2:8000',
     ],
 
-    'allowed_origins_patterns' => [],
+    'allowed_origins_patterns' => [
+        '#^https?://localhost(:\d+)?$#',
+        '#^https?://127\.0\.0\.1(:\d+)?$#',
+        '#^https?://192\.168\.\d+\.\d+(:\d+)?$#',
+        '#^https?://10\.\d+\.\d+\.\d+(:\d+)?$#',
+    ],
 
     'allowed_headers' => ['*'],
 

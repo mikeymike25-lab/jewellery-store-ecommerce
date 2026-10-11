@@ -397,6 +397,26 @@ Route::get('/', function () {
     // Otherwise, show the normal homepage
     return app(HomeController::class)->index();
 })->name('home');
+
+// Admin redirect for direct path access (e.g. localhost:8000/admin -> admin.localhost:8000)
+Route::get('/admin', function () {
+    $port = request()->getPort();
+    $portString = in_array($port, [80, 443]) ? '' : ':' . $port;
+    $scheme = request()->getScheme();
+    $host = request()->getHost();
+    $adminHost = str_starts_with($host, 'admin.') ? $host : 'admin.' . ($host === '127.0.0.1' ? 'localhost' : $host);
+    return redirect($scheme . '://' . $adminHost . $portString . '/login');
+});
+
+Route::get('/admin/{any}', function ($any) {
+    $port = request()->getPort();
+    $portString = in_array($port, [80, 443]) ? '' : ':' . $port;
+    $scheme = request()->getScheme();
+    $host = request()->getHost();
+    $adminHost = str_starts_with($host, 'admin.') ? $host : 'admin.' . ($host === '127.0.0.1' ? 'localhost' : $host);
+    return redirect($scheme . '://' . $adminHost . $portString . '/' . ltrim($any, '/'));
+})->where('any', '.*');
+
 Route::get('/catalogue', [ProductController::class, 'index'])->name('catalogue');
 Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');
 
@@ -457,7 +477,7 @@ Route::middleware(['api.session'])->group(function () {
 // Keep this BELOW specific routes like auth, products, etc., to avoid shadowing
 Route::get('/{slug}', [App\Http\Controllers\CmsPageController::class, 'show'])
     ->name('cms.show')
-    ->where('slug', '^(?!test-route$|health$|login$|verify-email-sent$|verify-email$|reset-password$|auth$|checkout$|account$|catalogue$|collections$|newsroom$|api$|contact$|privacy-policy$|terms-of-service$|corporate-responsibility$|help$|accessibility$|orders-payments$|track-order$|boutiques-appointments$)[a-zA-Z0-9\-]+$');
+    ->where('slug', '^(?!admin$|test-route$|health$|login$|verify-email-sent$|verify-email$|reset-password$|auth$|checkout$|account$|catalogue$|collections$|newsroom$|api$|contact$|privacy-policy$|terms-of-service$|corporate-responsibility$|help$|accessibility$|orders-payments$|track-order$|boutiques-appointments$)[a-zA-Z0-9\-]+$');
 
 // Cart routes (using web middleware for proper session handling)
 Route::middleware(['web'])->group(function () {
@@ -496,15 +516,6 @@ Route::get('/api/products', function (Illuminate\Http\Request $request) {
             });
         }
 
-        // Handle room filtering
-        if ($request->has('room') && $request->get('room') !== 'all') {
-            $roomValue = $request->get('room');
-            // Only filter if room is specified and not 'all'
-            // whereJsonContains works for JSON columns - checks if the JSON array contains the value
-            $query->whereNotNull('room_category')
-                ->where('room_category', '!=', '[]')
-                ->whereJsonContains('room_category', $roomValue);
-        }
 
         // Handle sorting
         switch ($request->get('sort')) {
@@ -652,15 +663,19 @@ Route::get('/health', function () {
             $errors[] = 'Database connection failed: '.$e->getMessage();
         }
 
-        // Check Redis connection
-        try {
-            \Illuminate\Support\Facades\Redis::ping();
+        // Check Redis connection only if configured
+        if (env('REDIS_HOST')) {
+            try {
+                \Illuminate\Support\Facades\Redis::ping();
+                $checks['redis'] = true;
+            } catch (\Exception $e) {
+                $errors[] = 'Redis connection failed: '.$e->getMessage();
+            }
+        } else {
             $checks['redis'] = true;
-        } catch (\Exception $e) {
-            $errors[] = 'Redis connection failed: '.$e->getMessage();
         }
 
-        // Check storage directories
+        // Storage checks
         try {
             $storageWritable = is_writable(storage_path());
             $bootstrapWritable = is_writable(base_path('bootstrap/cache'));
@@ -676,9 +691,8 @@ Route::get('/health', function () {
             $errors[] = 'Storage check failed: '.$e->getMessage();
         }
 
-        // In testing environment, Redis is optional
         $requiredChecks = ['app', 'database', 'storage'];
-        if (app()->environment() !== 'testing') {
+        if (env('REDIS_HOST')) {
             $requiredChecks[] = 'redis';
         }
 

@@ -10,6 +10,7 @@ use App\Models\PaymentGateway;
 use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
@@ -200,11 +201,12 @@ class XenditPaymentController extends Controller
     public function returnSuccess(Request $request)
     {
         $orderNumber = $request->query('order');
-        Log::info('Xendit returnSuccess called', ['order_number' => $orderNumber]);
+        $isFromApp = $request->query('source') === 'app';
+        Log::info('Xendit returnSuccess called', ['order_number' => $orderNumber, 'is_from_app' => $isFromApp]);
 
         if ($orderNumber) {
             $order = Order::where('order_number', $orderNumber)->with('orderItems')->first();
-            if ($order && $order->user_id === Auth::id()) {
+            if ($order && ($order->user_id === Auth::id() || $isFromApp)) {
                 // Reload order to get latest payment status from webhook (webhook may have already updated it)
                 $order->refresh();
                 // Reload orderItems relationship after refresh
@@ -231,58 +233,67 @@ class XenditPaymentController extends Controller
                             if ($response->successful()) {
                                 $invoice = $response->json();
                                 if (isset($invoice['status']) && $invoice['status'] === 'PAID') {
-                                    // Update order status directly
-                                    $order->payment_status = 'paid';
-                                    $order->status = $order->status === 'pending' ? 'processing' : $order->status;
-                                    $order->save();
-
-                                    // Decrement stock for all items in the order
-                                    try {
-                                        foreach ($order->orderItems as $orderItem) {
-                                            // Record inventory movement (this also decrements stock)
-                                            \App\Models\InventoryMovement::recordStockOut(
-                                                $orderItem->product_id,
-                                                $orderItem->quantity,
-                                                'order',
-                                                "Order #{$order->order_number} - Xendit payment confirmed",
-                                                'App\Models\Order',
-                                                $order->id,
-                                                $order->user_id
-                                            );
+                                    $alreadyPaid = false;
+                                    DB::transaction(function () use ($order, &$alreadyPaid) {
+                                        $lockedOrder = Order::where('id', $order->id)->lockForUpdate()->first();
+                                        if (!$lockedOrder || $lockedOrder->payment_status === 'paid') {
+                                            $alreadyPaid = true;
+                                            return;
                                         }
-                                        Log::info('Stock decremented for paid Xendit order (returnSuccess)', ['order_id' => $order->id]);
-                                    } catch (\Exception $e) {
-                                        Log::warning('Failed to decrement stock for Xendit order (returnSuccess)', [
-                                            'order_id' => $order->id,
-                                            'error' => $e->getMessage(),
+
+                                        $lockedOrder->payment_status = 'paid';
+                                        $lockedOrder->status = $lockedOrder->status === 'pending' ? 'processing' : $lockedOrder->status;
+                                        $lockedOrder->save();
+
+                                        // Decrement stock for all items in the order
+                                        try {
+                                            foreach ($lockedOrder->orderItems as $orderItem) {
+                                                \App\Models\InventoryMovement::recordStockOut(
+                                                    $orderItem->product_id,
+                                                    $orderItem->quantity,
+                                                    'order',
+                                                    "Order #{$lockedOrder->order_number} - Xendit payment confirmed",
+                                                    'App\Models\Order',
+                                                    $lockedOrder->id,
+                                                    $lockedOrder->user_id
+                                                );
+                                            }
+                                            Log::info('Stock decremented for paid Xendit order (returnSuccess)', ['order_id' => $lockedOrder->id]);
+                                        } catch (\Exception $e) {
+                                            Log::warning('Failed to decrement stock for Xendit order (returnSuccess)', [
+                                                'order_id' => $lockedOrder->id,
+                                                'error' => $e->getMessage(),
+                                            ]);
+                                        }
+
+                                        // Clear only the cart items that were included in this order
+                                        $this->clearOrderedCartItems($lockedOrder);
+                                    });
+
+                                    if (! $alreadyPaid) {
+                                        Log::info('Payment status updated via direct API check in returnSuccess', [
+                                            'order_number' => $order->order_number,
+                                            'invoice_id' => $xenditInvoiceId,
                                         ]);
-                                        // Don't fail the order if stock update fails
-                                    }
 
-                                    // Clear only the cart items that were included in this order
-                                    $this->clearOrderedCartItems($order);
-
-                                    Log::info('Payment status updated via direct API check in returnSuccess', [
-                                        'order_number' => $order->order_number,
-                                        'invoice_id' => $xenditInvoiceId,
-                                    ]);
-
-                                    // Create notification for successful payment
-                                    try {
-                                        $notification = Notification::createForUser(
-                                            $order->user,
-                                            'Payment Successful',
-                                            "Your payment for order #{$order->order_number} has been confirmed successfully. Your order is now being processed.",
-                                            'system',
-                                            ['order_id' => $order->id, 'order_number' => $order->order_number, 'type' => 'payment_success']
-                                        );
-                                        // Mark as sent immediately so it shows in the badge
-                                        $notification->markAsSent();
-                                    } catch (\Exception $e) {
-                                        Log::warning('Failed to create payment success notification in returnSuccess', [
-                                            'order_id' => $order->id,
-                                            'error' => $e->getMessage(),
-                                        ]);
+                                        // Create notification for successful payment
+                                        try {
+                                            $order->refresh();
+                                            $notification = Notification::createForUser(
+                                                $order->user,
+                                                'Payment Successful',
+                                                "Your payment for order #{$order->order_number} has been confirmed successfully. Your order is now being processed.",
+                                                'system',
+                                                ['order_id' => $order->id, 'order_number' => $order->order_number, 'type' => 'payment_success']
+                                            );
+                                            // Mark as sent immediately so it shows in the badge
+                                            $notification->markAsSent();
+                                        } catch (\Exception $e) {
+                                            Log::warning('Failed to create payment success notification in returnSuccess', [
+                                                'order_id' => $order->id,
+                                                'error' => $e->getMessage(),
+                                            ]);
+                                        }
                                     }
                                 }
                             }
@@ -297,6 +308,11 @@ class XenditPaymentController extends Controller
 
                 // Reload order one more time to get the latest status
                 $order->refresh();
+
+                // If requested from mobile app, deep link straight back to the app
+                if ($isFromApp) {
+                    return redirect()->away("eclore://return/success?order={$order->order_number}");
+                }
 
                 // Instead of redirecting, show a simple success page in the new tab
                 // The original confirmation page will automatically detect the payment success via polling
@@ -325,12 +341,17 @@ class XenditPaymentController extends Controller
     public function returnFailed(Request $request)
     {
         $orderNumber = $request->query('order');
+        $isFromApp = $request->query('source') === 'app';
         if ($orderNumber) {
             $order = Order::where('order_number', $orderNumber)->first();
-            if ($order && $order->user_id === Auth::id()) {
+            if ($order && ($order->user_id === Auth::id() || $isFromApp)) {
                 // Update order payment status to failed
                 $order->payment_status = 'failed';
                 $order->save();
+
+                if ($isFromApp) {
+                    return redirect()->away("eclore://return/failed?order={$order->order_number}");
+                }
 
                 // Redirect to confirmation page with payment_return flag
                 return redirect()->route('checkout.confirmation', [
@@ -397,8 +418,49 @@ class XenditPaymentController extends Controller
                 $previousStatus = $order->payment_status;
 
                 if ($status === 'PAID') {
-                    $order->payment_status = 'paid';
-                    $order->status = $order->status === 'pending' ? 'processing' : $order->status;
+                    $stockDecremented = false;
+                    DB::transaction(function () use ($order, &$previousStatus, &$stockDecremented) {
+                        $lockedOrder = Order::where('id', $order->id)->lockForUpdate()->first();
+                        if (!$lockedOrder) {
+                            return;
+                        }
+                        $previousStatus = $lockedOrder->payment_status;
+
+                        // Idempotency: skip if already marked paid
+                        if ($lockedOrder->payment_status === 'paid') {
+                            Log::info('Xendit webhook: Order already marked paid, skipping duplicate stock decrement', ['order_id' => $lockedOrder->id]);
+                            return;
+                        }
+
+                        $lockedOrder->payment_status = 'paid';
+                        $lockedOrder->status = $lockedOrder->status === 'pending' ? 'processing' : $lockedOrder->status;
+                        $lockedOrder->save();
+
+                        // Decrement stock for all items in the order
+                        try {
+                            foreach ($lockedOrder->orderItems as $orderItem) {
+                                \App\Models\InventoryMovement::recordStockOut(
+                                    $orderItem->product_id,
+                                    $orderItem->quantity,
+                                    'order',
+                                    "Order #{$lockedOrder->order_number} - Xendit payment confirmed",
+                                    'App\Models\Order',
+                                    $lockedOrder->id,
+                                    $lockedOrder->user_id
+                                );
+                            }
+                            Log::info('Stock decremented for paid Xendit order', ['order_id' => $lockedOrder->id]);
+                        } catch (\Exception $e) {
+                            Log::warning('Failed to decrement stock for Xendit order', [
+                                'order_id' => $lockedOrder->id,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
+
+                        // Clear only the cart items that were included in this order
+                        $this->clearOrderedCartItems($lockedOrder);
+                        $stockDecremented = true;
+                    });
 
                     Log::info('Xendit payment confirmed via webhook', [
                         'order_number' => $order->order_number,
@@ -406,49 +468,25 @@ class XenditPaymentController extends Controller
                         'new_status' => 'paid',
                     ]);
 
-                    // Decrement stock for all items in the order
-                    try {
-                        foreach ($order->orderItems as $orderItem) {
-                            // Record inventory movement (this also decrements stock)
-                            \App\Models\InventoryMovement::recordStockOut(
-                                $orderItem->product_id,
-                                $orderItem->quantity,
-                                'order',
-                                "Order #{$order->order_number} - Xendit payment confirmed",
-                                'App\Models\Order',
-                                $order->id,
-                                $order->user_id
+                    if ($stockDecremented) {
+                        // Create notification for successful payment
+                        try {
+                            $order->refresh();
+                            $notification = Notification::createForUser(
+                                $order->user,
+                                'Payment Successful',
+                                "Your payment for order #{$order->order_number} has been confirmed successfully. Your order is now being processed.",
+                                'system',
+                                ['order_id' => $order->id, 'order_number' => $order->order_number, 'type' => 'payment_success']
                             );
+                            // Mark as sent immediately so it shows in the badge
+                            $notification->markAsSent();
+                        } catch (\Exception $e) {
+                            Log::warning('Failed to create payment success notification', [
+                                'order_id' => $order->id,
+                                'error' => $e->getMessage(),
+                            ]);
                         }
-                        Log::info('Stock decremented for paid Xendit order', ['order_id' => $order->id]);
-                    } catch (\Exception $e) {
-                        Log::warning('Failed to decrement stock for Xendit order', [
-                            'order_id' => $order->id,
-                            'error' => $e->getMessage(),
-                        ]);
-                        // Don't fail the order if stock update fails
-                    }
-
-                    // Clear only the cart items that were included in this order
-                    $this->clearOrderedCartItems($order);
-                    Log::info('Cart items cleared for paid order', ['order_id' => $order->id]);
-
-                    // Create notification for successful payment
-                    try {
-                        $notification = Notification::createForUser(
-                            $order->user,
-                            'Payment Successful',
-                            "Your payment for order #{$order->order_number} has been confirmed successfully. Your order is now being processed.",
-                            'system',
-                            ['order_id' => $order->id, 'order_number' => $order->order_number, 'type' => 'payment_success']
-                        );
-                        // Mark as sent immediately so it shows in the badge
-                        $notification->markAsSent();
-                    } catch (\Exception $e) {
-                        Log::warning('Failed to create payment success notification', [
-                            'order_id' => $order->id,
-                            'error' => $e->getMessage(),
-                        ]);
                     }
                 } elseif (in_array($status, ['EXPIRED', 'FAILED', 'VOIDED'])) {
                     $order->payment_status = 'failed';

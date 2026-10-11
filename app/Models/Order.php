@@ -76,12 +76,6 @@ class Order extends Model
         return $this->hasMany(OrderActivity::class);
     }
 
-    public function coupons()
-    {
-        return $this->belongsToMany(Coupon::class, 'coupon_usage')
-            ->withPivot('discount_amount', 'used_at')
-            ->withTimestamps();
-    }
 
     public function paymentGateway(): BelongsTo
     {

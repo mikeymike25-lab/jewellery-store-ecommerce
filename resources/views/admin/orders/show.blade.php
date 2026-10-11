@@ -491,14 +491,26 @@
                 <div class="mb-6">
                         <h4 class="font-medium text-stone-900 dark:text-white mb-3">Billing Address</h4>
                         <div class="text-sm text-stone-600 dark:text-stone-400 bg-stone-50 dark:bg-stone-800 rounded-xl p-4">
-                        @if($order->billing_address && !empty($order->billing_address))
-                            <p>{{ $order->billing_address['name'] ?? '' }}</p>
-                            <p>{{ $order->billing_address['address_line_1'] ?? '' }}</p>
-                            @if(isset($order->billing_address['address_line_2']) && $order->billing_address['address_line_2'])
-                            <p>{{ $order->billing_address['address_line_2'] }}</p>
-                            @endif
-                            <p>{{ $order->billing_address['city'] ?? '' }}, {{ $order->billing_address['state'] ?? '' }} {{ $order->billing_address['postal_code'] ?? '' }}</p>
-                            <p>{{ $order->billing_address['country'] ?? '' }}</p>
+                        @php
+                            $b = is_array($order->billing_address) ? $order->billing_address : [];
+                            $bName = $b['name'] ?? trim(($b['first_name'] ?? '') . ' ' . ($b['last_name'] ?? '')) ?: ($order->user->name ?? trim(($order->user->first_name ?? '') . ' ' . ($order->user->last_name ?? '')));
+                            $bStreet = $b['street'] ?? ($b['address_line_1'] ?? ($order->user->street ?? ''));
+                            $bBarangay = $b['barangay'] ?? ($order->user->barangay ?? '');
+                            $bCity = $b['city'] ?? ($order->user->city ?? '');
+                            $bProvince = $b['province'] ?? ($b['state'] ?? ($order->user->province ?? ''));
+                            $bRegion = $b['region'] ?? ($order->user->region ?? '');
+                            $bZip = $b['zip_code'] ?? ($b['postal_code'] ?? ($order->user->zip_code ?? ''));
+                            $bCountry = $b['country'] ?? 'Philippines';
+                            $bHasContent = !empty($bName) || !empty($bStreet) || !empty($bCity);
+                        @endphp
+                        @if($bHasContent)
+                            <p class="font-medium text-stone-900 dark:text-white">{{ $bName }}</p>
+                            @if($bStreet)<p>{{ $bStreet }}</p>@endif
+                            @if(!empty($b['address_line_2']))<p>{{ $b['address_line_2'] }}</p>@endif
+                            @if($bBarangay)<p>{{ $bBarangay }}</p>@endif
+                            <p>{{ implode(', ', array_filter([$bCity, $bProvince])) }}</p>
+                            <p>{{ implode(' ', array_filter([$bRegion, $bZip])) }}</p>
+                            <p>{{ $bCountry }}</p>
                         @elseif($order->user)
                             @php
                                 // Philippine address format: street, barangay, city, province, region, zip_code
@@ -526,14 +538,26 @@
                 <div>
                         <h4 class="font-medium text-stone-900 dark:text-white mb-3">Shipping Address</h4>
                         <div class="text-sm text-stone-600 dark:text-stone-400 bg-stone-50 dark:bg-stone-800 rounded-xl p-4">
-                        @if($order->shipping_address && !empty($order->shipping_address))
-                            <p>{{ $order->shipping_address['name'] ?? '' }}</p>
-                            <p>{{ $order->shipping_address['street'] ?? '' }}</p>
-                                @if(isset($order->shipping_address['barangay']) && $order->shipping_address['barangay'])
-                            <p>{{ $order->shipping_address['barangay'] }}</p>
-                            @endif
-                            <p>{{ $order->shipping_address['city'] ?? '' }}, {{ $order->shipping_address['province'] ?? '' }}</p>
-                            <p>{{ $order->shipping_address['region'] ?? '' }} {{ $order->shipping_address['zip_code'] ?? '' }}</p>
+                        @php
+                            $s = is_array($order->shipping_address) ? $order->shipping_address : [];
+                            $sName = $s['name'] ?? trim(($s['first_name'] ?? '') . ' ' . ($s['last_name'] ?? '')) ?: ($order->user->name ?? trim(($order->user->first_name ?? '') . ' ' . ($order->user->last_name ?? '')));
+                            $sStreet = $s['street'] ?? ($s['address_line_1'] ?? ($order->user->street ?? ''));
+                            $sBarangay = $s['barangay'] ?? ($order->user->barangay ?? '');
+                            $sCity = $s['city'] ?? ($order->user->city ?? '');
+                            $sProvince = $s['province'] ?? ($s['state'] ?? ($order->user->province ?? ''));
+                            $sRegion = $s['region'] ?? ($order->user->region ?? '');
+                            $sZip = $s['zip_code'] ?? ($s['postal_code'] ?? ($order->user->zip_code ?? ''));
+                            $sCountry = $s['country'] ?? 'Philippines';
+                            $sHasContent = !empty($sName) || !empty($sStreet) || !empty($sCity);
+                        @endphp
+                        @if($sHasContent)
+                            <p class="font-medium text-stone-900 dark:text-white">{{ $sName }}</p>
+                            @if($sStreet)<p>{{ $sStreet }}</p>@endif
+                            @if(!empty($s['address_line_2']))<p>{{ $s['address_line_2'] }}</p>@endif
+                            @if($sBarangay)<p>{{ $sBarangay }}</p>@endif
+                            <p>{{ implode(', ', array_filter([$sCity, $sProvince])) }}</p>
+                            <p>{{ implode(' ', array_filter([$sRegion, $sZip])) }}</p>
+                            <p>{{ $sCountry }}</p>
                         @elseif($order->user)
                             @php
                                 // Philippine address format: street, barangay, city, province, region, zip_code

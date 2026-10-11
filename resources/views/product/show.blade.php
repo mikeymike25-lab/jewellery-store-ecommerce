@@ -557,6 +557,14 @@ body {
 </style>
 
 <div class="product-details-container">
+    <!-- Back Button -->
+    <div style="padding-top: 1.5rem; margin-bottom: -1.5rem;">
+        <a href="javascript:history.back()" style="display: inline-flex; align-items: center; gap: 0.5rem; font-family: 'Azeret Mono', monospace; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.2em; color: #666; text-decoration: none; transition: color 0.3s ease;">
+            <i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i>
+            <span>Back to Atelier</span>
+        </a>
+    </div>
+
     <!-- Breadcrumb -->
     <nav class="breadcrumb" aria-label="Breadcrumb">
         <a href="{{ route('home') }}">Home</a>
@@ -602,25 +610,6 @@ body {
                 </div>
             </div>
 
-            @php
-                $galleryImages = is_array($product->gallery) && count($product->gallery) > 0 ? $product->gallery : ($product->images ?? []);
-            @endphp
-            
-            <!-- Thumbnails -->
-            @if(count($galleryImages) > 1)
-                <div class="thumbnail-container" style="display: flex; justify-content: flex-start; padding: 1.5rem 0;">
-                    <div class="thumbnail-grid" id="thumbnailGrid" style="display: flex; gap: 1rem; overflow-x: auto; scrollbar-width: none;">
-                    @foreach($galleryImages as $index => $image)
-                        @php $imgUrl = str_starts_with($image, 'http') ? $image : storage_url($image); @endphp
-                        <div class="thumbnail {{ $index === 0 ? 'active' : '' }}" 
-                             style="flex-shrink: 0; width: 90px; height: 110px; background: white; cursor: pointer; border: 1px solid var(--brand-border); transition: all 0.4s ease;"
-                             onclick="changeImage('{{ $imgUrl }}', this, {{ $index }})">
-                            <img src="{{ $imgUrl }}" style="width: 100%; height: 100%; object-fit: cover;" alt="{{ $product->name }} - Image {{ $index + 1 }}">
-                        </div>
-                    @endforeach
-                    </div>
-                </div>
-            @endif
         </div>
 
         <!-- Product Info -->

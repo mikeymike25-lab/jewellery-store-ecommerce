@@ -230,24 +230,6 @@
     </div>
 </div>
 
-                <!-- Pagination -->
-                @if($orders->hasPages())
-                    @include('admin.partials.pagination', ['paginator' => $orders])
-                @endif
-            @else
-                <div class="p-8 text-center">
-                    <div class="mx-auto h-12 w-12 rounded-full bg-stone-100 flex items-center justify-center mb-4">
-                        <svg class="h-6 w-6 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                    </div>
-                    <p class="text-stone-500">No tracked orders found</p>
-                </div>
-            @endif
-        </div>
-    </div>
-</div>
-
 @push('scripts')
 <script>
 function copyTrackingNumber(trackingNumber) {

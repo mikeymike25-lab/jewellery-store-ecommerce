@@ -15,6 +15,31 @@ use Illuminate\Support\Facades\Validator;
 class RefundRequestController extends Controller
 {
     /**
+     * List refund / repair requests for the authenticated user.
+     */
+    public function index(Request $request)
+    {
+        $user = Auth::user();
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        $requests = ReturnRepair::where('user_id', $user->id)
+            ->with(['order.orderItems.product'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'returns_repairs' => $requests,
+        ]);
+    }
+
+    /**
      * Store a new refund request.
      */
     public function store(Request $request)
@@ -139,6 +164,7 @@ class RefundRequestController extends Controller
                 'success' => true,
                 'message' => 'Refund request submitted successfully. Your request is being reviewed.',
                 'rma_number' => $returnRepair->rma_number,
+                'data' => $returnRepair,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();

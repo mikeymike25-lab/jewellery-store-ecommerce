@@ -67,6 +67,20 @@ class AuthController extends Controller
      */
     public function checkUsername($username): JsonResponse
     {
+        if (strlen($username) < 3 || strlen($username) > 30) {
+            return response()->json([
+                'available' => false,
+                'message' => 'Username must be between 3 and 30 characters',
+            ], 200, ['Content-Type' => 'application/json']);
+        }
+
+        if (! preg_match('/^[a-zA-Z0-9_]+$/', $username)) {
+            return response()->json([
+                'available' => false,
+                'message' => 'Letters, numbers, and underscores only (no @ or symbols)',
+            ], 200, ['Content-Type' => 'application/json']);
+        }
+
         $exists = User::where('username', $username)->exists();
 
         return response()->json([

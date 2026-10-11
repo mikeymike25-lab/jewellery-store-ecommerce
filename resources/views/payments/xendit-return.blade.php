@@ -28,11 +28,25 @@
                     Order #{{ $order->order_number }}
                 </p>
             @endif
+            @if($order)
+                <div class="my-6">
+                    <a href="eclore://return/success?order={{ $order->order_number }}" 
+                       class="inline-block bg-[#B6965D] hover:bg-[#9A7E4D] text-white px-6 py-3 uppercase text-xs tracking-widest font-medium transition-colors">
+                        Return to Éclore App
+                    </a>
+                </div>
+            @endif
             <p class="text-sm text-gray-500">
                 You can close this window. Your order confirmation page will update automatically.
             </p>
             <script>
                 lucide.createIcons();
+                // Attempt deep link return to app
+                @if($order)
+                    try {
+                        window.location.href = "eclore://return/success?order={{ $order->order_number }}";
+                    } catch (e) {}
+                @endif
                 // Auto-close after 5 seconds
                 setTimeout(function() {
                     window.close();
@@ -51,6 +65,12 @@
                 <p class="text-sm text-gray-500 mb-6">
                     Order #{{ $order->order_number }}
                 </p>
+                <div class="my-6">
+                    <a href="eclore://return/success?order={{ $order->order_number }}" 
+                       class="inline-block bg-[#B6965D] hover:bg-[#9A7E4D] text-white px-6 py-3 uppercase text-xs tracking-widest font-medium transition-colors">
+                        Return to Éclore App
+                    </a>
+                </div>
             @endif
             <p class="text-sm text-gray-500">
                 You can close this window. Your order confirmation page will update automatically once payment is confirmed.
@@ -70,6 +90,14 @@
             <p class="text-lg text-gray-600 mb-6">
                 We couldn't process your payment. Please try again.
             </p>
+            @if($order)
+                <div class="my-6">
+                    <a href="eclore://return/failed?order={{ $order->order_number }}" 
+                       class="inline-block bg-[#1A1A1A] hover:bg-[#2C2C2C] text-white px-6 py-3 uppercase text-xs tracking-widest font-medium transition-colors">
+                        Return to Éclore App
+                    </a>
+                </div>
+            @endif
             <p class="text-sm text-gray-500">
                 You can close this window and check your order status.
             </p>

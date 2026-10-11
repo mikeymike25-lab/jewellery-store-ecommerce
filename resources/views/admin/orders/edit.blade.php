@@ -41,6 +41,26 @@
     <form action="{{ admin_route('orders.update', $order) }}" method="POST" class="space-y-8">
     @csrf
     @method('PUT')
+
+    @php
+        $bAddress = is_array($order->billing_address) ? $order->billing_address : [];
+        $bName = old('billing_address.name', $bAddress['name'] ?? trim(($bAddress['first_name'] ?? '') . ' ' . ($bAddress['last_name'] ?? '')) ?: ($order->user->name ?? trim(($order->user->first_name ?? '') . ' ' . ($order->user->last_name ?? ''))));
+        $bStreet = old('billing_address.street', $bAddress['street'] ?? ($bAddress['address_line_1'] ?? ($order->user->street ?? '')));
+        $bRegion = old('billing_address.region', $bAddress['region'] ?? ($order->user->region ?? ''));
+        $bProvince = old('billing_address.province', $bAddress['province'] ?? ($order->user->province ?? ''));
+        $bCity = old('billing_address.city', $bAddress['city'] ?? ($order->user->city ?? ''));
+        $bBarangay = old('billing_address.barangay', $bAddress['barangay'] ?? ($order->user->barangay ?? ''));
+        $bZip = old('billing_address.zip_code', $bAddress['zip_code'] ?? ($bAddress['postal_code'] ?? ($order->user->zip_code ?? '')));
+
+        $sAddress = is_array($order->shipping_address) ? $order->shipping_address : [];
+        $sName = old('shipping_address.name', $sAddress['name'] ?? trim(($sAddress['first_name'] ?? '') . ' ' . ($sAddress['last_name'] ?? '')) ?: ($order->user->name ?? trim(($order->user->first_name ?? '') . ' ' . ($order->user->last_name ?? ''))));
+        $sStreet = old('shipping_address.street', $sAddress['street'] ?? ($sAddress['address_line_1'] ?? ($order->user->street ?? '')));
+        $sRegion = old('shipping_address.region', $sAddress['region'] ?? ($order->user->region ?? ''));
+        $sProvince = old('shipping_address.province', $sAddress['province'] ?? ($order->user->province ?? ''));
+        $sCity = old('shipping_address.city', $sAddress['city'] ?? ($order->user->city ?? ''));
+        $sBarangay = old('shipping_address.barangay', $sAddress['barangay'] ?? ($order->user->barangay ?? ''));
+        $sZip = old('shipping_address.zip_code', $sAddress['zip_code'] ?? ($sAddress['postal_code'] ?? ($order->user->zip_code ?? '')));
+    @endphp
     
         <!-- Main Grid Layout -->
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
@@ -129,82 +149,99 @@
                                     </label>
                                     <input type="text" 
                                            name="billing_address[name]" 
-                                           value="{{ $order->billing_address['name'] ?? '' }}"
+                                           value="{{ $bName }}"
+                                           placeholder="Enter customer full name"
                                            class="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 focus:border-primary focus:outline-none dark:border-strokedark dark:bg-boxdark dark:text-white">
                                 </div>
                                 
                                 <div class="space-y-2">
                                     <label class="block text-sm font-medium text-stone-700 dark:text-stone-300">
                                         Street Address <span class="text-red-500">*</span>
-                            </label>
+                                    </label>
                                     <input type="text" 
                                            name="billing_address[street]" 
-                                           value="{{ $order->billing_address['street'] ?? '' }}"
+                                           value="{{ $bStreet }}"
                                            placeholder="Enter street address"
                                            class="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 focus:border-primary focus:outline-none dark:border-strokedark dark:bg-boxdark dark:text-white">
-                        </div>
+                                </div>
                         
                                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                     <div class="space-y-2">
                                         <label class="block text-sm font-medium text-stone-700 dark:text-stone-300">
                                             Region <span class="text-red-500">*</span>
-                            </label>
+                                        </label>
                                         <select name="billing_address[region]" 
                                                 id="billing_region"
+                                                data-selected="{{ $bRegion }}"
                                                 class="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 focus:border-primary focus:outline-none dark:border-strokedark dark:bg-boxdark dark:text-white">
                                             <option value="">Select Region</option>
+                                            @if($bRegion)
+                                                <option value="{{ $bRegion }}" selected>{{ $bRegion }}</option>
+                                            @endif
                                         </select>
-                        </div>
+                                    </div>
                         
                                     <div class="space-y-2">
                                         <label class="block text-sm font-medium text-stone-700 dark:text-stone-300">
                                             Province <span class="text-red-500">*</span>
-                            </label>
+                                        </label>
                                         <select name="billing_address[province]" 
                                                 id="billing_province"
+                                                data-selected="{{ $bProvince }}"
                                                 class="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 focus:border-primary focus:outline-none dark:border-strokedark dark:bg-boxdark dark:text-white">
                                             <option value="">Select Province</option>
+                                            @if($bProvince)
+                                                <option value="{{ $bProvince }}" selected>{{ $bProvince }}</option>
+                                            @endif
                                         </select>
-                        </div>
+                                    </div>
                         
                                     <div class="space-y-2">
                                         <label class="block text-sm font-medium text-stone-700 dark:text-stone-300">
                                             City <span class="text-red-500">*</span>
-                            </label>
+                                        </label>
                                         <select name="billing_address[city]" 
                                                 id="billing_city"
+                                                data-selected="{{ $bCity }}"
                                                 class="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 focus:border-primary focus:outline-none dark:border-strokedark dark:bg-boxdark dark:text-white">
                                             <option value="">Select City</option>
+                                            @if($bCity)
+                                                <option value="{{ $bCity }}" selected>{{ $bCity }}</option>
+                                            @endif
                                         </select>
-                        </div>
+                                    </div>
                         
                                     <div class="space-y-2">
                                         <label class="block text-sm font-medium text-stone-700 dark:text-stone-300">
                                             Barangay <span class="text-red-500">*</span>
-                            </label>
+                                        </label>
                                         <select name="billing_address[barangay]" 
                                                 id="billing_barangay"
+                                                data-selected="{{ $bBarangay }}"
                                                 class="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 focus:border-primary focus:outline-none dark:border-strokedark dark:bg-boxdark dark:text-white">
                                             <option value="">Select Barangay</option>
+                                            @if($bBarangay)
+                                                <option value="{{ $bBarangay }}" selected>{{ $bBarangay }}</option>
+                                            @endif
                                         </select>
-                        </div>
+                                    </div>
                         
                                     <div class="space-y-2">
                                         <label class="block text-sm font-medium text-stone-700 dark:text-stone-300">
                                             Zip Code <span class="text-red-500">*</span>
-                            </label>
+                                        </label>
                                         <input type="text" 
                                                name="billing_address[zip_code]" 
                                                id="billing_zip_code"
-                                               value="{{ $order->billing_address['zip_code'] ?? '' }}"
+                                               value="{{ $bZip }}"
                                                placeholder="Enter zip code"
                                                class="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 focus:border-primary focus:outline-none dark:border-strokedark dark:bg-boxdark dark:text-white">
-                        </div>
+                                    </div>
                         
                                     <div class="space-y-2">
                                         <label class="block text-sm font-medium text-stone-700 dark:text-stone-300">
                                             Country
-                            </label>
+                                        </label>
                                         <input type="text" 
                                                name="billing_address[country]" 
                                                value="Philippines"
@@ -244,7 +281,8 @@
                                 </label>
                                 <input type="text" 
                                        name="shipping_address[name]" 
-                                       value="{{ $order->shipping_address['name'] ?? '' }}"
+                                       value="{{ $sName }}"
+                                       placeholder="Enter recipient full name"
                                        class="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 focus:border-primary focus:outline-none dark:border-strokedark dark:bg-boxdark dark:text-white">
                             </div>
                             
@@ -254,7 +292,7 @@
                                 </label>
                                 <input type="text" 
                                        name="shipping_address[street]" 
-                                       value="{{ $order->shipping_address['street'] ?? '' }}"
+                                       value="{{ $sStreet }}"
                                        placeholder="Enter street address"
                                        class="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 focus:border-primary focus:outline-none dark:border-strokedark dark:bg-boxdark dark:text-white">
                             </div>
@@ -263,63 +301,79 @@
                                 <div class="space-y-2">
                                     <label class="block text-sm font-medium text-stone-700 dark:text-stone-300">
                                         Region <span class="text-red-500">*</span>
-                            </label>
+                                    </label>
                                     <select name="shipping_address[region]" 
                                             id="shipping_region"
+                                            data-selected="{{ $sRegion }}"
                                             class="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 focus:border-primary focus:outline-none dark:border-strokedark dark:bg-boxdark dark:text-white">
                                         <option value="">Select Region</option>
+                                        @if($sRegion)
+                                            <option value="{{ $sRegion }}" selected>{{ $sRegion }}</option>
+                                        @endif
                                     </select>
-                        </div>
+                                </div>
                         
                                 <div class="space-y-2">
                                     <label class="block text-sm font-medium text-stone-700 dark:text-stone-300">
                                         Province <span class="text-red-500">*</span>
-                            </label>
+                                    </label>
                                     <select name="shipping_address[province]" 
                                             id="shipping_province"
+                                            data-selected="{{ $sProvince }}"
                                             class="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 focus:border-primary focus:outline-none dark:border-strokedark dark:bg-boxdark dark:text-white">
                                         <option value="">Select Province</option>
+                                        @if($sProvince)
+                                            <option value="{{ $sProvince }}" selected>{{ $sProvince }}</option>
+                                        @endif
                                     </select>
-                        </div>
+                                </div>
                         
                                 <div class="space-y-2">
                                     <label class="block text-sm font-medium text-stone-700 dark:text-stone-300">
                                         City <span class="text-red-500">*</span>
-                            </label>
+                                    </label>
                                     <select name="shipping_address[city]" 
                                             id="shipping_city"
+                                            data-selected="{{ $sCity }}"
                                             class="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 focus:border-primary focus:outline-none dark:border-strokedark dark:bg-boxdark dark:text-white">
                                         <option value="">Select City</option>
+                                        @if($sCity)
+                                            <option value="{{ $sCity }}" selected>{{ $sCity }}</option>
+                                        @endif
                                     </select>
-                        </div>
+                                </div>
                         
                                 <div class="space-y-2">
                                     <label class="block text-sm font-medium text-stone-700 dark:text-stone-300">
                                         Barangay <span class="text-red-500">*</span>
-                            </label>
+                                    </label>
                                     <select name="shipping_address[barangay]" 
                                             id="shipping_barangay"
+                                            data-selected="{{ $sBarangay }}"
                                             class="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 focus:border-primary focus:outline-none dark:border-strokedark dark:bg-boxdark dark:text-white">
                                         <option value="">Select Barangay</option>
+                                        @if($sBarangay)
+                                            <option value="{{ $sBarangay }}" selected>{{ $sBarangay }}</option>
+                                        @endif
                                     </select>
-                        </div>
+                                </div>
                         
                                 <div class="space-y-2">
                                     <label class="block text-sm font-medium text-stone-700 dark:text-stone-300">
                                         Zip Code <span class="text-red-500">*</span>
-                            </label>
+                                    </label>
                                     <input type="text" 
                                            name="shipping_address[zip_code]" 
                                            id="shipping_zip_code"
-                                           value="{{ $order->shipping_address['zip_code'] ?? '' }}"
+                                           value="{{ $sZip }}"
                                            placeholder="Enter zip code"
                                            class="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 focus:border-primary focus:outline-none dark:border-strokedark dark:bg-boxdark dark:text-white">
-                        </div>
+                                </div>
                         
                                 <div class="space-y-2">
                                     <label class="block text-sm font-medium text-stone-700 dark:text-stone-300">
                                         Country
-                            </label>
+                                    </label>
                                     <input type="text" 
                                            name="shipping_address[country]" 
                                            value="Philippines"
@@ -488,6 +542,35 @@
     // PSGC API Integration
     const PSGC_BASE_URL = 'https://psgc.cloud/api';
     
+    // Helper to populate a select and preserve selection
+    function populateSelect(selectElement, items, placeholder = 'Select Option', selectedValue = null) {
+        if (!selectElement) return;
+        const currentVal = selectedValue || selectElement.value || selectElement.dataset.selected || '';
+        selectElement.innerHTML = `<option value="">${placeholder}</option>`;
+        let matched = false;
+        
+        items.forEach(item => {
+            const name = typeof item === 'string' ? item : item.name;
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            if (currentVal && name.toLowerCase() === currentVal.toLowerCase()) {
+                option.selected = true;
+                matched = true;
+            }
+            selectElement.appendChild(option);
+        });
+
+        // Ensure pre-selected server rendered value isn't lost if not in remote list
+        if (currentVal && !matched) {
+            const fallbackOption = document.createElement('option');
+            fallbackOption.value = currentVal;
+            fallbackOption.textContent = currentVal;
+            fallbackOption.selected = true;
+            selectElement.appendChild(fallbackOption);
+        }
+    }
+
     // Load regions
     async function loadRegions() {
         try {
@@ -496,94 +579,92 @@
             
             const billingRegion = document.getElementById('billing_region');
             const shippingRegion = document.getElementById('shipping_region');
-            
-            regions.forEach(region => {
-                const option = document.createElement('option');
-                option.value = region.name;
-                option.textContent = region.name;
-                billingRegion.appendChild(option.cloneNode(true));
-                shippingRegion.appendChild(option);
-            });
+
+            if (billingRegion) {
+                populateSelect(billingRegion, regions, 'Select Region', billingRegion.dataset.selected || billingRegion.value);
+            }
+            if (shippingRegion) {
+                populateSelect(shippingRegion, regions, 'Select Region', shippingRegion.dataset.selected || shippingRegion.value);
+            }
         } catch (error) {
             console.error('Error loading regions:', error);
         }
     }
     
     // Load provinces for a region
-    async function loadProvinces(regionName, provinceSelectId) {
+    async function loadProvinces(regionName, provinceSelectId, selectedValue = null) {
+        const provinceSelect = document.getElementById(provinceSelectId);
+        if (!provinceSelect) return;
+        if (!regionName) {
+            provinceSelect.innerHTML = '<option value="">Select Province</option>';
+            return;
+        }
+
+        if (regionName.toLowerCase().includes('ncr') || regionName.toLowerCase().includes('national capital region')) {
+            provinceSelect.disabled = true;
+            provinceSelect.classList.add('psgc-disabled');
+            provinceSelect.innerHTML = '<option value="N/A (NCR)" selected>N/A (NCR)</option>';
+            return;
+        }
+
+        provinceSelect.disabled = false;
+        provinceSelect.classList.remove('psgc-disabled');
+
         try {
             const response = await fetch(`${PSGC_BASE_URL}/regions/${encodeURIComponent(regionName)}/provinces`);
             const provinces = await response.json();
-            
-            const provinceSelect = document.getElementById(provinceSelectId);
-            provinceSelect.innerHTML = '<option value="">Select Province</option>';
-            
-            provinces.forEach(province => {
-                const option = document.createElement('option');
-                option.value = province.name;
-                option.textContent = province.name;
-                provinceSelect.appendChild(option);
-            });
+            populateSelect(provinceSelect, provinces, 'Select Province', selectedValue || provinceSelect.dataset.selected || provinceSelect.value);
         } catch (error) {
             console.error('Error loading provinces:', error);
         }
     }
     
-    // Load cities for a province
-    async function loadCities(provinceName, citySelectId) {
+    // Load cities for a province or NCR
+    async function loadCities(regionName, provinceName, citySelectId, selectedValue = null) {
+        const citySelect = document.getElementById(citySelectId);
+        if (!citySelect) return;
+
         try {
-            const response = await fetch(`${PSGC_BASE_URL}/provinces/${encodeURIComponent(provinceName)}/cities`);
-            const cities = await response.json();
-            
-            const citySelect = document.getElementById(citySelectId);
-            citySelect.innerHTML = '<option value="">Select City</option>';
-            
-            cities.forEach(city => {
-                const option = document.createElement('option');
-                option.value = city.name;
-                option.textContent = city.name;
-                citySelect.appendChild(option);
-            });
+            let url;
+            if (regionName && (regionName.toLowerCase().includes('ncr') || regionName.toLowerCase().includes('national capital region'))) {
+                url = `${PSGC_BASE_URL}/regions/National Capital Region/cities`;
+            } else if (provinceName && provinceName !== 'N/A (NCR)') {
+                url = `${PSGC_BASE_URL}/provinces/${encodeURIComponent(provinceName)}/cities-municipalities`;
+            } else {
+                return;
+            }
+
+            let response = await fetch(url);
+            let cities = await response.json();
+
+            if (!Array.isArray(cities) || cities.length === 0) {
+                if (provinceName && provinceName !== 'N/A (NCR)') {
+                    response = await fetch(`${PSGC_BASE_URL}/provinces/${encodeURIComponent(provinceName)}/cities`);
+                    cities = await response.json();
+                }
+            }
+
+            populateSelect(citySelect, Array.isArray(cities) ? cities : [], 'Select City', selectedValue || citySelect.dataset.selected || citySelect.value);
         } catch (error) {
             console.error('Error loading cities:', error);
         }
     }
     
-    // Load cities for NCR (no province)
-    async function loadCitiesForNCR(citySelectId) {
-        try {
-            const response = await fetch(`${PSGC_BASE_URL}/regions/National Capital Region/cities`);
-            const cities = await response.json();
-            
-            const citySelect = document.getElementById(citySelectId);
-            citySelect.innerHTML = '<option value="">Select City</option>';
-            
-            cities.forEach(city => {
-                const option = document.createElement('option');
-                option.value = city.name;
-                option.textContent = city.name;
-                citySelect.appendChild(option);
-            });
-        } catch (error) {
-            console.error('Error loading NCR cities:', error);
-        }
-    }
-    
     // Load barangays for a city
-    async function loadBarangays(cityName, barangaySelectId) {
+    async function loadBarangays(cityName, barangaySelectId, selectedValue = null) {
+        const barangaySelect = document.getElementById(barangaySelectId);
+        if (!barangaySelect || !cityName) return;
+
         try {
-            const response = await fetch(`${PSGC_BASE_URL}/cities/${encodeURIComponent(cityName)}/barangays`);
-            const barangays = await response.json();
-            
-            const barangaySelect = document.getElementById(barangaySelectId);
-            barangaySelect.innerHTML = '<option value="">Select Barangay</option>';
-            
-            barangays.forEach(barangay => {
-                const option = document.createElement('option');
-                option.value = barangay.name;
-                option.textContent = barangay.name;
-                barangaySelect.appendChild(option);
-            });
+            let response = await fetch(`${PSGC_BASE_URL}/cities-municipalities/${encodeURIComponent(cityName)}/barangays`);
+            let barangays = await response.json();
+
+            if (!Array.isArray(barangays) || barangays.length === 0) {
+                response = await fetch(`${PSGC_BASE_URL}/cities/${encodeURIComponent(cityName)}/barangays`);
+                barangays = await response.json();
+            }
+
+            populateSelect(barangaySelect, Array.isArray(barangays) ? barangays : [], 'Select Barangay', selectedValue || barangaySelect.dataset.selected || barangaySelect.value);
         } catch (error) {
             console.error('Error loading barangays:', error);
         }
@@ -591,140 +672,187 @@
     
     // Initialize PSGC functionality
     function initializePSGC() {
-        // Load regions on page load
         loadRegions();
         
-        // Billing address event listeners
-        document.getElementById('billing_region').addEventListener('change', function() {
+        // Setup Billing Address listeners
+        const billingRegion = document.getElementById('billing_region');
+        const billingProvince = document.getElementById('billing_province');
+        const billingCity = document.getElementById('billing_city');
+        const billingBarangay = document.getElementById('billing_barangay');
+
+        billingRegion?.addEventListener('change', function() {
             const regionName = this.value;
-            const provinceSelect = document.getElementById('billing_province');
-            const citySelect = document.getElementById('billing_city');
-            const barangaySelect = document.getElementById('billing_barangay');
-            
-            // Reset dependent selects
-            provinceSelect.innerHTML = '<option value="">Select Province</option>';
-            citySelect.innerHTML = '<option value="">Select City</option>';
-            barangaySelect.innerHTML = '<option value="">Select Barangay</option>';
+            this.dataset.selected = regionName;
+            billingProvince.innerHTML = '<option value="">Select Province</option>';
+            billingCity.innerHTML = '<option value="">Select City</option>';
+            billingBarangay.innerHTML = '<option value="">Select Barangay</option>';
+            billingProvince.dataset.selected = '';
+            billingCity.dataset.selected = '';
+            billingBarangay.dataset.selected = '';
             
             if (regionName) {
-                // Check if NCR
                 if (regionName.toLowerCase().includes('ncr') || regionName.toLowerCase().includes('national capital region')) {
-                    provinceSelect.disabled = true;
-                    provinceSelect.classList.add('psgc-disabled');
-                    provinceSelect.innerHTML = '<option value="N/A (NCR)">N/A (NCR)</option>';
-                    loadCitiesForNCR('billing_city');
+                    billingProvince.disabled = true;
+                    billingProvince.classList.add('psgc-disabled');
+                    billingProvince.innerHTML = '<option value="N/A (NCR)" selected>N/A (NCR)</option>';
+                    loadCities(regionName, null, 'billing_city');
                 } else {
-                    provinceSelect.disabled = false;
-                    provinceSelect.classList.remove('psgc-disabled');
+                    billingProvince.disabled = false;
+                    billingProvince.classList.remove('psgc-disabled');
                     loadProvinces(regionName, 'billing_province');
                 }
             }
         });
         
-        document.getElementById('billing_province').addEventListener('change', function() {
-            const provinceName = this.value;
-            const citySelect = document.getElementById('billing_city');
-            const barangaySelect = document.getElementById('billing_barangay');
+        billingProvince?.addEventListener('focus', function() {
+            if (this.options.length <= 2 && billingRegion?.value && !billingRegion.value.toLowerCase().includes('ncr')) {
+                loadProvinces(billingRegion.value, 'billing_province', this.value);
+            }
+        });
+
+        billingProvince?.addEventListener('change', function() {
+            this.dataset.selected = this.value;
+            billingCity.innerHTML = '<option value="">Select City</option>';
+            billingBarangay.innerHTML = '<option value="">Select Barangay</option>';
+            billingCity.dataset.selected = '';
+            billingBarangay.dataset.selected = '';
             
-            // Reset dependent selects
-            citySelect.innerHTML = '<option value="">Select City</option>';
-            barangaySelect.innerHTML = '<option value="">Select Barangay</option>';
-            
-            if (provinceName && provinceName !== 'N/A (NCR)') {
-                loadCities(provinceName, 'billing_city');
+            if (this.value && this.value !== 'N/A (NCR)') {
+                loadCities(billingRegion?.value, this.value, 'billing_city');
+            }
+        });
+
+        billingCity?.addEventListener('focus', function() {
+            if (this.options.length <= 2 && (billingProvince?.value || billingRegion?.value)) {
+                loadCities(billingRegion?.value, billingProvince?.value, 'billing_city', this.value);
             }
         });
         
-        document.getElementById('billing_city').addEventListener('change', function() {
-            const cityName = this.value;
-            const barangaySelect = document.getElementById('billing_barangay');
+        billingCity?.addEventListener('change', function() {
+            this.dataset.selected = this.value;
+            billingBarangay.innerHTML = '<option value="">Select Barangay</option>';
+            billingBarangay.dataset.selected = '';
             
-            // Reset dependent select
-            barangaySelect.innerHTML = '<option value="">Select Barangay</option>';
-            
-            if (cityName) {
-                loadBarangays(cityName, 'billing_barangay');
+            if (this.value) {
+                loadBarangays(this.value, 'billing_barangay');
             }
         });
+
+        billingBarangay?.addEventListener('focus', function() {
+            if (this.options.length <= 2 && billingCity?.value) {
+                loadBarangays(billingCity.value, 'billing_barangay', this.value);
+            }
+        });
+
+        billingBarangay?.addEventListener('change', function() {
+            this.dataset.selected = this.value;
+        });
         
-        // Shipping address event listeners
-        document.getElementById('shipping_region').addEventListener('change', function() {
+        // Setup Shipping Address listeners
+        const shippingRegion = document.getElementById('shipping_region');
+        const shippingProvince = document.getElementById('shipping_province');
+        const shippingCity = document.getElementById('shipping_city');
+        const shippingBarangay = document.getElementById('shipping_barangay');
+
+        shippingRegion?.addEventListener('change', function() {
             const regionName = this.value;
-            const provinceSelect = document.getElementById('shipping_province');
-            const citySelect = document.getElementById('shipping_city');
-            const barangaySelect = document.getElementById('shipping_barangay');
-            
-            // Reset dependent selects
-            provinceSelect.innerHTML = '<option value="">Select Province</option>';
-            citySelect.innerHTML = '<option value="">Select City</option>';
-            barangaySelect.innerHTML = '<option value="">Select Barangay</option>';
+            this.dataset.selected = regionName;
+            shippingProvince.innerHTML = '<option value="">Select Province</option>';
+            shippingCity.innerHTML = '<option value="">Select City</option>';
+            shippingBarangay.innerHTML = '<option value="">Select Barangay</option>';
+            shippingProvince.dataset.selected = '';
+            shippingCity.dataset.selected = '';
+            shippingBarangay.dataset.selected = '';
             
             if (regionName) {
-                // Check if NCR
                 if (regionName.toLowerCase().includes('ncr') || regionName.toLowerCase().includes('national capital region')) {
-                    provinceSelect.disabled = true;
-                    provinceSelect.classList.add('psgc-disabled');
-                    provinceSelect.innerHTML = '<option value="N/A (NCR)">N/A (NCR)</option>';
-                    loadCitiesForNCR('shipping_city');
+                    shippingProvince.disabled = true;
+                    shippingProvince.classList.add('psgc-disabled');
+                    shippingProvince.innerHTML = '<option value="N/A (NCR)" selected>N/A (NCR)</option>';
+                    loadCities(regionName, null, 'shipping_city');
                 } else {
-                    provinceSelect.disabled = false;
-                    provinceSelect.classList.remove('psgc-disabled');
+                    shippingProvince.disabled = false;
+                    shippingProvince.classList.remove('psgc-disabled');
                     loadProvinces(regionName, 'shipping_province');
                 }
             }
         });
-        
-        document.getElementById('shipping_province').addEventListener('change', function() {
-            const provinceName = this.value;
-            const citySelect = document.getElementById('shipping_city');
-            const barangaySelect = document.getElementById('shipping_barangay');
-            
-            // Reset dependent selects
-            citySelect.innerHTML = '<option value="">Select City</option>';
-            barangaySelect.innerHTML = '<option value="">Select Barangay</option>';
-            
-            if (provinceName && provinceName !== 'N/A (NCR)') {
-                loadCities(provinceName, 'shipping_city');
+
+        shippingProvince?.addEventListener('focus', function() {
+            if (this.options.length <= 2 && shippingRegion?.value && !shippingRegion.value.toLowerCase().includes('ncr')) {
+                loadProvinces(shippingRegion.value, 'shipping_province', this.value);
             }
         });
         
-        document.getElementById('shipping_city').addEventListener('change', function() {
-            const cityName = this.value;
-            const barangaySelect = document.getElementById('shipping_barangay');
+        shippingProvince?.addEventListener('change', function() {
+            this.dataset.selected = this.value;
+            shippingCity.innerHTML = '<option value="">Select City</option>';
+            shippingBarangay.innerHTML = '<option value="">Select Barangay</option>';
+            shippingCity.dataset.selected = '';
+            shippingBarangay.dataset.selected = '';
             
-            // Reset dependent select
-            barangaySelect.innerHTML = '<option value="">Select Barangay</option>';
+            if (this.value && this.value !== 'N/A (NCR)') {
+                loadCities(shippingRegion?.value, this.value, 'shipping_city');
+            }
+        });
+
+        shippingCity?.addEventListener('focus', function() {
+            if (this.options.length <= 2 && (shippingProvince?.value || shippingRegion?.value)) {
+                loadCities(shippingRegion?.value, shippingProvince?.value, 'shipping_city', this.value);
+            }
+        });
+        
+        shippingCity?.addEventListener('change', function() {
+            this.dataset.selected = this.value;
+            shippingBarangay.innerHTML = '<option value="">Select Barangay</option>';
+            shippingBarangay.dataset.selected = '';
             
-            if (cityName) {
-                loadBarangays(cityName, 'shipping_barangay');
+            if (this.value) {
+                loadBarangays(this.value, 'shipping_barangay');
+            }
+        });
+
+        shippingBarangay?.addEventListener('focus', function() {
+            if (this.options.length <= 2 && shippingCity?.value) {
+                loadBarangays(shippingCity.value, 'shipping_barangay', this.value);
+            }
+        });
+
+        shippingBarangay?.addEventListener('change', function() {
+            this.dataset.selected = this.value;
+        });
+
+        // Same as billing address checkbox
+        const sameAsBilling = document.getElementById('sameAsBilling');
+        sameAsBilling?.addEventListener('change', function() {
+            if (this.checked) {
+                const fields = ['name', 'street', 'region', 'province', 'city', 'barangay', 'zip_code'];
+                fields.forEach(field => {
+                    const bEl = document.querySelector(`[name="billing_address[${field}]"]`);
+                    const sEl = document.querySelector(`[name="shipping_address[${field}]"]`);
+                    if (bEl && sEl) {
+                        if (sEl.tagName === 'SELECT') {
+                            if (bEl.value && !Array.from(sEl.options).some(o => o.value === bEl.value)) {
+                                const opt = document.createElement('option');
+                                opt.value = bEl.value;
+                                opt.textContent = bEl.value;
+                                sEl.appendChild(opt);
+                            }
+                            sEl.value = bEl.value;
+                            sEl.dataset.selected = bEl.value;
+                        } else {
+                            sEl.value = bEl.value;
+                        }
+                    }
+                });
             }
         });
     }
     
-    // Same as billing address functionality
-    document.getElementById('sameAsBilling').addEventListener('change', function() {
-        const billingInputs = document.querySelectorAll('input[name^="billing_address"], select[name^="billing_address"]');
-        const shippingInputs = document.querySelectorAll('input[name^="shipping_address"], select[name^="shipping_address"]');
-        
-        if (this.checked) {
-            billingInputs.forEach((input, index) => {
-                if (shippingInputs[index]) {
-                    if (input.tagName === 'SELECT') {
-                        // Copy select value and trigger change event
-                        shippingInputs[index].value = input.value;
-                        shippingInputs[index].dispatchEvent(new Event('change'));
-                    } else {
-                    shippingInputs[index].value = input.value;
-                    }
-                }
-            });
-        }
-    });
-    
     // Initialize when DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
         initializePSGC();
-    lucide.createIcons();
+        lucide.createIcons();
     });
 </script>
 @endpush

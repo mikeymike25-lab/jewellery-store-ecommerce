@@ -28,7 +28,7 @@ class AppointmentController extends Controller
             'status' => 'pending',
         ]));
 
-        if ($request->ajax()) {
+        if ($request->ajax() || $request->wantsJson() || $request->is('api/*')) {
             return response()->json([
                 'success' => true,
                 'message' => 'Your appointment request has been received. Our concierge will contact you shortly.',
@@ -37,5 +37,35 @@ class AppointmentController extends Controller
         }
 
         return back()->with('success', 'Your appointment request has been received. Our concierge will contact you shortly.');
+    }
+
+    /**
+     * List appointments for the authenticated customer.
+     */
+    public function userAppointments(Request $request)
+    {
+        $user = $request->user();
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        $appointments = Appointment::where('user_id', $user->id)
+            ->orWhere('email', $user->email)
+            ->orderBy('appointment_date', 'desc')
+            ->orderBy('appointment_time', 'desc')
+            ->paginate(10);
+
+        return response()->json([
+            'success' => true,
+            'data' => $appointments->items(),
+            'meta' => [
+                'current_page' => $appointments->currentPage(),
+                'last_page' => $appointments->lastPage(),
+                'total' => $appointments->total(),
+            ],
+        ]);
     }
 }

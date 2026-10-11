@@ -268,20 +268,20 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 h-full">
                     <!-- Product 1: Dynamic Left Slot -->
                     @if($leftProduct)
-                    <div class="hero-border-r p-20 flex flex-col items-center justify-center relative overflow-hidden group">
+                    <div class="hero-border-r p-12 sm:p-20 flex flex-col items-center justify-center relative overflow-hidden group">
                         <div class="absolute top-12 right-12 z-30">
                             <button class="hero-wishlist-btn navbar-icon-btn p-4 rounded-full text-white hover:text-[#B6965D] hover:bg-white/10 transition-all cursor-pointer" data-product-id="{{ $leftProduct->id }}" id="hero-wish-{{ $leftProduct->id }}">
                                 <i data-lucide="heart" class="w-6 h-6" id="hero-heart-{{ $leftProduct->id }}"></i>
                             </button>
                         </div>
-                        <div class="relative z-10 transform translate-y-8 group-hover:translate-y-0 transition-transform duration-1000">
+                        <div class="relative z-10 w-64 h-64 rounded-3xl bg-gradient-to-b from-white/95 via-white/90 to-stone-100/90 border border-[#B6965D]/30 shadow-2xl p-6 flex items-center justify-center ring-1 ring-[#B6965D]/20 backdrop-blur-md overflow-hidden group-hover:shadow-[0_20px_50px_rgba(182,150,93,0.25)] transition-all duration-700">
                              @php $leftImg = (is_array($leftProduct->images) && count($leftProduct->images) > 0) ? $leftProduct->images[0] : 'products/default.webp'; @endphp
-                             <img loading="lazy" src="{{ storage_url($leftImg) }}" alt="{{ $leftProduct->name }}" class="w-64 h-64 object-contain drop-shadow-2xl">
+                             <img loading="lazy" src="{{ storage_url($leftImg) }}" alt="{{ $leftProduct->name }}" class="max-h-full max-w-full object-contain drop-shadow-xl transform group-hover:scale-105 transition-transform duration-700">
                         </div>
-                        <div class="mt-12 text-center relative z-10">
-                            <h3 class="font-playfair text-2xl text-white mb-4">{{ $leftProduct->name }}</h3>
-                            <p class="text-[10px] font-azeret text-white/60 tracking-widest uppercase mb-8">[{{ number_format($leftProduct->price, 2) }}]</p>
-                            <a href="{{ $leftProduct->slug ? route('products.show', $leftProduct->slug) : '#' }}" class="bg-white text-black px-6 py-2 text-[9px] tracking-[0.2em] uppercase font-bold flex items-center gap-3 mx-auto w-max hover:bg-black hover:text-white transition-all">
+                        <div class="mt-8 text-center relative z-10">
+                            <h3 class="font-playfair text-2xl text-white mb-2">{{ $leftProduct->name }}</h3>
+                            <p class="text-[10px] font-azeret text-white/70 tracking-widest uppercase mb-6">[{{ number_format($leftProduct->price, 2) }}]</p>
+                            <a href="{{ $leftProduct->slug ? route('products.show', $leftProduct->slug) : '#' }}" class="bg-white text-black px-7 py-3 text-[10px] tracking-[0.2em] uppercase font-bold flex items-center gap-3 mx-auto w-max hover:bg-stone-100 transition-all shadow-md active:scale-95">
                                 <span class="text-[4px]">●</span> SEE DETAILS
                             </a>
                         </div>
@@ -289,25 +289,25 @@
                     @endif
 
                     <!-- Product 2: Carousel Slot -->
-                    <div class="p-0 flex flex-col items-center justify-center relative overflow-hidden group">
+                    <div class="p-0 flex flex-col items-center justify-center relative overflow-hidden group" id="heroCarouselWrapper">
                         <div id="heroCarousel" class="w-full h-full relative">
                             <div class="carousel-container flex h-full transition-transform duration-1000 ease-in-out" id="hero-slides">
-                                @forelse($carouselProducts as $prod)
-                                <div class="min-w-full h-full flex flex-col items-center justify-center p-20 relative">
+                                @forelse($carouselProducts as $index => $prod)
+                                <div class="min-w-full h-full flex flex-col items-center justify-center p-12 sm:p-20 relative">
                                     <div class="product-arc opacity-30"></div>
                                     <div class="absolute top-12 right-12 z-30">
                                         <button class="hero-wishlist-btn navbar-icon-btn p-4 rounded-full text-white hover:text-[#B6965D] hover:bg-white/10 transition-all cursor-pointer" data-product-id="{{ $prod->id }}" id="hero-wish-{{ $prod->id }}">
                                             <i data-lucide="heart" class="w-6 h-6" id="hero-heart-{{ $prod->id }}"></i>
                                         </button>
                                     </div>
-                                    <div class="relative z-10 transform translate-y-8 group-hover:translate-y-0 transition-transform duration-1000 slide-img">
+                                    <div class="relative z-10 w-64 h-64 rounded-3xl bg-gradient-to-b from-white/95 via-white/90 to-stone-100/90 border border-[#B6965D]/30 shadow-2xl p-6 flex items-center justify-center ring-1 ring-[#B6965D]/20 backdrop-blur-md overflow-hidden group-hover:shadow-[0_20px_50px_rgba(182,150,93,0.25)] transition-all duration-700 slide-img">
                                      @php $prodImg = (is_array($prod->images) && count($prod->images) > 0) ? $prod->images[0] : 'products/default.webp'; @endphp
-                                     <img src="{{ storage_url($prodImg) }}" alt="{{ $prod->name }}" class="w-64 h-64 object-contain drop-shadow-2xl">
+                                     <img src="{{ storage_url($prodImg) }}" alt="{{ $prod->name }}" class="max-h-full max-w-full object-contain drop-shadow-xl transform group-hover:scale-105 transition-transform duration-700">
                                     </div>
-                                    <div class="mt-12 text-center relative z-10">
-                                        <h3 class="font-playfair text-2xl text-white mb-4">{{ $prod->name }}</h3>
-                                        <p class="text-[10px] font-azeret text-white/60 tracking-widest uppercase mb-8">[{{ number_format($prod->price, 2) }}]</p>
-                                        <a href="{{ $prod->slug ? route('products.show', $prod->slug) : '#' }}" class="bg-white text-black px-6 py-2 text-[9px] tracking-[0.2em] uppercase font-bold flex items-center gap-3 mx-auto w-max hover:bg-black hover:text-white transition-all">
+                                    <div class="mt-8 text-center relative z-10">
+                                        <h3 class="font-playfair text-2xl text-white mb-2">{{ $prod->name }}</h3>
+                                        <p class="text-[10px] font-azeret text-white/70 tracking-widest uppercase mb-6">[{{ number_format($prod->price, 2) }}]</p>
+                                        <a href="{{ $prod->slug ? route('products.show', $prod->slug) : '#' }}" class="bg-white text-black px-7 py-3 text-[10px] tracking-[0.2em] uppercase font-bold flex items-center gap-3 mx-auto w-max hover:bg-stone-100 transition-all shadow-md active:scale-95">
                                             <span class="text-[4px]">●</span> SEE DETAILS
                                         </a>
                                     </div>
@@ -322,14 +322,21 @@
                             @if($carouselProducts->count() > 1)
                             <!-- Carousel Nav Buttons -->
                             <div class="absolute inset-y-0 left-4 flex items-center z-30">
-                                <button onclick="moveHeroCarousel(-1)" class="navbar-icon-btn p-4 text-white/30 hover:text-white transition-colors">
-                                    <i data-lucide="chevron-left" class="w-6 h-6"></i>
+                                <button onclick="moveHeroCarousel(-1)" class="navbar-icon-btn p-3 bg-black/40 hover:bg-black/75 rounded-full border border-white/20 text-white/70 hover:text-white transition-all backdrop-blur-sm">
+                                    <i data-lucide="chevron-left" class="w-5 h-5"></i>
                                 </button>
                             </div>
                             <div class="absolute inset-y-0 right-4 flex items-center z-30">
-                                <button onclick="moveHeroCarousel(1)" class="navbar-icon-btn p-4 text-white/30 hover:text-white transition-colors">
-                                    <i data-lucide="chevron-right" class="w-6 h-6"></i>
+                                <button onclick="moveHeroCarousel(1)" class="navbar-icon-btn p-3 bg-black/40 hover:bg-black/75 rounded-full border border-white/20 text-white/70 hover:text-white transition-all backdrop-blur-sm">
+                                    <i data-lucide="chevron-right" class="w-5 h-5"></i>
                                 </button>
+                            </div>
+
+                            <!-- Carousel Pagination Dots -->
+                            <div class="absolute bottom-6 inset-x-0 flex items-center justify-center gap-2 z-30" id="heroCarouselDots">
+                                @foreach($carouselProducts as $index => $prod)
+                                <button type="button" onclick="goToHeroSlide({{ $index }})" class="h-1.5 rounded-full transition-all duration-300 {{ $index === 0 ? 'w-6 bg-[#B6965D]' : 'w-2 bg-white/30' }}" aria-label="Slide {{ $index + 1 }}"></button>
+                                @endforeach
                             </div>
                             @endif
                         </div>
@@ -338,16 +345,59 @@
             </div>
         </div>
         <script>
-            // ── Hero Carousel ──
+            // ── Hero Carousel Auto-slide & Nav ──
             let currentHeroSlide = 0;
             const totalHeroSlides = {{ $carouselProducts->count() }};
             const heroSlides = document.getElementById('hero-slides');
+            const heroWrapper = document.getElementById('heroCarouselWrapper');
+            let heroAutoSlideInterval = null;
+
+            function updateHeroDots() {
+                const dots = document.querySelectorAll('#heroCarouselDots button');
+                dots.forEach((dot, idx) => {
+                    if (idx === currentHeroSlide) {
+                        dot.className = 'h-1.5 rounded-full transition-all duration-300 w-6 bg-[#B6965D]';
+                    } else {
+                        dot.className = 'h-1.5 rounded-full transition-all duration-300 w-2 bg-white/30 hover:bg-white/60';
+                    }
+                });
+            }
+
+            function goToHeroSlide(idx) {
+                if(!heroSlides || totalHeroSlides <= 1) return;
+                currentHeroSlide = idx;
+                heroSlides.style.transform = `translateX(-${currentHeroSlide * 100}%)`;
+                updateHeroDots();
+                resetHeroAutoSlide();
+            }
 
             function moveHeroCarousel(direction) {
                 if(!heroSlides || totalHeroSlides <= 1) return;
                 currentHeroSlide = (currentHeroSlide + direction + totalHeroSlides) % totalHeroSlides;
                 heroSlides.style.transform = `translateX(-${currentHeroSlide * 100}%)`;
+                updateHeroDots();
+                resetHeroAutoSlide();
             }
+
+            function startHeroAutoSlide() {
+                if (totalHeroSlides <= 1) return;
+                clearInterval(heroAutoSlideInterval);
+                heroAutoSlideInterval = setInterval(() => {
+                    moveHeroCarousel(1);
+                }, 4500);
+            }
+
+            function resetHeroAutoSlide() {
+                clearInterval(heroAutoSlideInterval);
+                startHeroAutoSlide();
+            }
+
+            if (heroWrapper) {
+                heroWrapper.addEventListener('mouseenter', () => clearInterval(heroAutoSlideInterval));
+                heroWrapper.addEventListener('mouseleave', () => startHeroAutoSlide());
+            }
+
+            startHeroAutoSlide();
 
             // ── Wishlist Buttons (Hero & Icons) ──
             function setHeartState(productId, inWishlist, type = 'hero') {

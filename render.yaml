@@ -1,0 +1,70 @@
+databases:
+  - name: eclore-postgres
+    databaseName: eclore_db
+    user: eclore_user
+    plan: free
+    region: singapore
+
+services:
+  - type: web
+    name: eclore-backend
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: render-deployment
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: APP_NAME
+        value: "Éclore Maison"
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        generateValue: true
+      - key: APP_URL
+        fromService:
+          type: web
+          name: eclore-backend
+          property: host
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        fromDatabase:
+          name: eclore-postgres
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: eclore-postgres
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: eclore-postgres
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: eclore-postgres
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: eclore-postgres
+          property: password
+      - key: DATABASE_URL
+        fromDatabase:
+          name: eclore-postgres
+          property: connectionString
+      - key: SESSION_DRIVER
+        value: file
+      - key: CACHE_STORE
+        value: file
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: XENDIT_SECRET_KEY
+        sync: false
+      - key: XENDIT_PUBLIC_KEY
+        sync: false
+      - key: XENDIT_WEBHOOK_VERIFICATION_TOKEN
+        sync: false

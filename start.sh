@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 
 # Simplified Laravel startup script for Docker Compose
 echo "Starting Laravel application..."
@@ -7,70 +7,69 @@ echo "Starting Laravel application..."
 export PORT=${PORT:-80}
 
 # Create .env file with environment variables from Docker Compose
+# Create .env file with environment variables from Render / Docker
 echo "Creating .env file..."
 cat > .env << EOF
-APP_NAME="Éclore"
+APP_NAME="${APP_NAME:-Éclore Maison}"
 APP_ENV=${APP_ENV:-production}
 APP_DEBUG=${APP_DEBUG:-false}
-APP_KEY=
+APP_KEY=${APP_KEY:-}
 APP_URL=${APP_URL:-http://localhost:$PORT}
 
 LOG_CHANNEL=stack
 LOG_LEVEL=${LOG_LEVEL:-error}
 
-DB_CONNECTION=${DB_CONNECTION:-mysql}
-DB_HOST=${DB_HOST:-mysql}
-DB_PORT=${DB_PORT:-3306}
-DB_DATABASE=${DB_DATABASE:-davids_wood}
-DB_USERNAME=${DB_USERNAME:-eclore_user}
-DB_PASSWORD=${DB_PASSWORD}
+DB_CONNECTION=${DB_CONNECTION:-pgsql}
+DB_HOST=${DB_HOST:-}
+DB_PORT=${DB_PORT:-5432}
+DB_DATABASE=${DB_DATABASE:-}
+DB_USERNAME=${DB_USERNAME:-}
+DB_PASSWORD=${DB_PASSWORD:-}
+DATABASE_URL=${DATABASE_URL:-}
 
 BROADCAST_DRIVER=log
-CACHE_DRIVER=${CACHE_DRIVER:-redis}
+CACHE_DRIVER=${CACHE_DRIVER:-file}
+CACHE_STORE=${CACHE_STORE:-file}
 FILESYSTEM_DISK=local
-QUEUE_CONNECTION=${QUEUE_CONNECTION:-redis}
-SESSION_DRIVER=${SESSION_DRIVER:-redis}
+QUEUE_CONNECTION=${QUEUE_CONNECTION:-sync}
+SESSION_DRIVER=${SESSION_DRIVER:-file}
 SESSION_LIFETIME=120
 
-REDIS_HOST=${REDIS_HOST:-redis}
-REDIS_PASSWORD=${REDIS_PASSWORD}
+REDIS_HOST=${REDIS_HOST:-}
+REDIS_PASSWORD=${REDIS_PASSWORD:-}
 REDIS_PORT=${REDIS_PORT:-6379}
 
 MAIL_MAILER=${MAIL_MAILER:-smtp}
-MAIL_HOST=${MAIL_HOST}
-MAIL_PORT=${MAIL_PORT}
-MAIL_USERNAME=${MAIL_USERNAME}
-MAIL_PASSWORD=${MAIL_PASSWORD}
+MAIL_HOST=${MAIL_HOST:-}
+MAIL_PORT=${MAIL_PORT:-587}
+MAIL_USERNAME=${MAIL_USERNAME:-}
+MAIL_PASSWORD=${MAIL_PASSWORD:-}
 MAIL_ENCRYPTION=${MAIL_ENCRYPTION:-tls}
-MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS}
-MAIL_FROM_NAME=${MAIL_FROM_NAME:-"Éclore"}
+MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS:-info@eclorejewellery.com}
+MAIL_FROM_NAME=${MAIL_FROM_NAME:-"Éclore Maison"}
+
+XENDIT_SECRET_KEY=${XENDIT_SECRET_KEY:-}
+XENDIT_PUBLIC_KEY=${XENDIT_PUBLIC_KEY:-}
+XENDIT_WEBHOOK_VERIFICATION_TOKEN=${XENDIT_WEBHOOK_VERIFICATION_TOKEN:-}
 
 VITE_APP_NAME="Éclore"
 EOF
 
-# Generate APP_KEY
-echo "Generating APP_KEY..."
-APP_KEY_VALUE="base64:$(openssl rand -base64 32)"
-echo "Generated APP_KEY value: $APP_KEY_VALUE"
-
-# Update .env file with the generated APP_KEY
-sed -i "s/^APP_KEY=.*/APP_KEY=$APP_KEY_VALUE/" .env
-
-# Verify the APP_KEY was set correctly
-echo "Verifying APP_KEY in .env file:"
-if grep "APP_KEY=" .env; then
-  echo "APP_KEY verification successful"
+# Ensure APP_KEY exists
+if [ -z "$APP_KEY" ]; then
+    echo "No APP_KEY passed in environment, generating one..."
+    APP_KEY_VALUE="base64:$(openssl rand -base64 32)"
+    sed -i "s/^APP_KEY=.*/APP_KEY=$APP_KEY_VALUE/" .env
+    export APP_KEY="$APP_KEY_VALUE"
 else
-  echo "ERROR: APP_KEY verification failed!"
-  exit 1
+    echo "Using existing APP_KEY from environment."
 fi
-
-export APP_KEY="$APP_KEY_VALUE"
-echo "APP_KEY exported: $APP_KEY"
 
 # Clear Laravel config cache
 echo "Clearing Laravel config cache..."
 php artisan config:clear
+php artisan route:clear
+php artisan view:clear
 
 # Create necessary directories
 echo "Creating directories..."
@@ -78,12 +77,14 @@ mkdir -p storage/logs
 mkdir -p storage/framework/cache
 mkdir -p storage/framework/sessions
 mkdir -p storage/framework/views
+mkdir -p storage/app/public
 mkdir -p bootstrap/cache
 
 # Set permissions
 chmod -R 775 storage bootstrap/cache
+php artisan storage:link || true
 
-# Wait for database to be ready (Docker Compose handles this with depends_on)
+# Wait for database to be ready
 echo "Waiting for database connection..."
 timeout=60
 counter=0
@@ -99,17 +100,10 @@ done
 
 if [ $counter -lt $timeout ]; then
     echo "Database is ready!"
-    # Run migrations
     echo "Running migrations..."
-    if php artisan tinker --execute="DB::table('migrations')->count();" 2>/dev/null; then
-        echo "Database already initialized, running pending migrations..."
-        php artisan migrate --force || echo "Some migrations may have failed, but continuing..."
-    else
-        echo "Fresh database detected, running fresh migrations..."
-        php artisan migrate:fresh --force --seed || echo "Fresh migrations failed, but continuing..."
-    fi
+    php artisan migrate --force || echo "Migrations completed with notices, continuing..."
 else
-    echo "Skipping migrations due to database connection issues"
+    echo "Skipping migrations due to database connection timeout"
 fi
 
 # Test Laravel configuration

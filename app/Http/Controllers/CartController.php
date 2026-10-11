@@ -20,23 +20,38 @@ class CartController extends Controller
     }
 
     /**
+     * Resolve session identifier from header or PHP session.
+     */
+    private function resolveSessionId(Request $request): string
+    {
+        $guestHeader = $request->header('X-Guest-Session-Id');
+        if (! empty($guestHeader) && is_string($guestHeader)) {
+            return $guestHeader;
+        }
+
+        if (! session()->isStarted()) {
+            session()->start();
+        }
+
+        return session()->getId();
+    }
+
+    /**
+     * Resolve authenticated user ID from Sanctum token or session.
+     */
+    private function resolveUserId(Request $request): ?int
+    {
+        return $request->user('sanctum')?->id ?? $request->user()?->id ?? \Auth::id();
+    }
+
+    /**
      * Get cart items for current user or guest.
      */
     public function index(Request $request)
     {
         try {
-            // Force session start
-            if (! session()->isStarted()) {
-                session()->start();
-            }
-
-            $sessionId = session()->getId();
-
-            // Use Laravel's built-in authentication
-            $userId = null;
-            if (\Auth::check()) {
-                $userId = \Auth::id();
-            }
+            $sessionId = $this->resolveSessionId($request);
+            $userId = $this->resolveUserId($request);
 
             if ($userId) {
                 // User is logged in - get their cart items
@@ -51,6 +66,18 @@ class CartController extends Controller
                     ->get();
             }
 
+            // Synchronize item prices with live product prices from Admin
+            foreach ($cartItems as $item) {
+                if ($item->product) {
+                    $livePrice = (float) $item->product->price;
+                    if ((float) $item->unit_price !== $livePrice) {
+                        $item->unit_price = $livePrice;
+                        $item->total_price = $livePrice * $item->quantity;
+                        $item->save();
+                    }
+                }
+            }
+
             $subtotal = $cartItems->sum('total_price');
             $totalItems = $cartItems->count(); // Count number of items, not quantity
 
@@ -62,13 +89,6 @@ class CartController extends Controller
                     'total_items' => $totalItems,
                 ],
                 'session_id' => $sessionId,
-                'debug' => [
-                    'session_id' => $sessionId,
-                    'user_id' => $userId,
-                    'items_count' => $cartItems->count(),
-                    'request_cookies' => $request->cookies->all(),
-                    'session_cookie' => $request->cookie('laravel_session'),
-                ],
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -89,20 +109,10 @@ class CartController extends Controller
                 'quantity' => 'integer|min:1',
             ]);
 
-            // Force session start
-            if (! session()->isStarted()) {
-                session()->start();
-            }
-
-            $sessionId = session()->getId();
+            $sessionId = $this->resolveSessionId($request);
             $productId = $request->product_id;
             $quantity = $request->quantity ?? 1;
-
-            // Use Laravel's built-in authentication
-            $userId = null;
-            if (\Auth::check()) {
-                $userId = \Auth::id();
-            }
+            $userId = $this->resolveUserId($request);
 
             // Get the product
             $product = Product::findOrFail($productId);
@@ -132,6 +142,8 @@ class CartController extends Controller
                             'image' => is_array($product->images) && ! empty($product->images) ? $product->images[0] : null,
                             'slug' => $product->slug,
                             'description' => $product->short_description,
+                            'size' => $request->input('size') ?? $request->input('ring_size'),
+                            'metal_type' => $request->input('metal_type'),
                         ],
                     ]);
                 }
@@ -162,26 +174,22 @@ class CartController extends Controller
                             'image' => is_array($product->images) && ! empty($product->images) ? $product->images[0] : null,
                             'slug' => $product->slug,
                             'description' => $product->short_description,
+                            'size' => $request->input('size') ?? $request->input('ring_size'),
+                            'metal_type' => $request->input('metal_type'),
                         ],
                     ]);
                 }
             }
 
-            // Force session save to ensure cookie is set
-            session()->save();
+            // Force session save if started
+            if (session()->isStarted()) {
+                session()->save();
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Item added to cart successfully',
                 'session_id' => $sessionId,
-                'debug' => [
-                    'session_id' => $sessionId,
-                    'user_id' => $userId,
-                    'product_id' => $productId,
-                    'quantity' => $quantity,
-                    'request_cookies' => $request->cookies->all(),
-                    'session_cookie' => $request->cookie('laravel_session'),
-                ],
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -198,11 +206,15 @@ class CartController extends Controller
     {
         $request->validate([
             'product_id' => 'required|integer|exists:products,id',
-            'quantity' => 'required|integer|min:1',
+            'quantity' => 'required|integer|min:0',
         ]);
 
-        $userId = Auth::id();
-        $sessionId = session()->getId();
+        if ($request->quantity <= 0) {
+            return $this->removeFromCart($request);
+        }
+
+        $userId = $this->resolveUserId($request);
+        $sessionId = $this->resolveSessionId($request);
 
         if ($userId) {
             $cartItem = CartItem::forUser($userId)
@@ -235,8 +247,8 @@ class CartController extends Controller
             'product_id' => 'required|integer|exists:products,id',
         ]);
 
-        $userId = Auth::id();
-        $sessionId = session()->getId();
+        $userId = $this->resolveUserId($request);
+        $sessionId = $this->resolveSessionId($request);
 
         if ($userId) {
             CartItem::forUser($userId)
@@ -259,8 +271,8 @@ class CartController extends Controller
      */
     public function clearCart(Request $request)
     {
-        $userId = Auth::id();
-        $sessionId = session()->getId();
+        $userId = $this->resolveUserId($request);
+        $sessionId = $this->resolveSessionId($request);
 
         if ($userId) {
             CartItem::forUser($userId)->delete();
@@ -356,5 +368,28 @@ class CartController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Migrate guest cart to authenticated user via API.
+     */
+    public function migrate(Request $request)
+    {
+        $userId = $this->resolveUserId($request);
+        if (! $userId) {
+            return response()->json(['success' => false, 'message' => 'Authentication required'], 401);
+        }
+
+        $guestSessionId = $request->input('guest_session_id') ?: $request->header('X-Guest-Session-Id');
+        if (! $guestSessionId) {
+            return response()->json(['success' => false, 'message' => 'Guest session ID required'], 400);
+        }
+
+        $this->migrateCartToUser($userId, $guestSessionId);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Cart migrated successfully',
+        ]);
     }
 }
