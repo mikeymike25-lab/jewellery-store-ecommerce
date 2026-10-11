@@ -7,6 +7,34 @@ use Illuminate\Support\Facades\Route;
 // Version 1 REST API (Stateless Bearer auth & mobile endpoints)
 Route::prefix('v1')->group(base_path('routes/api_v1.php'));
 
+Route::get('/seed-database-init', function () {
+    try {
+        if (\App\Models\Product::count() > 0) {
+            return response()->json([
+                'status' => 'already_seeded',
+                'products_count' => \App\Models\Product::count(),
+                'categories_count' => \App\Models\Category::count(),
+            ]);
+        }
+
+        \Artisan::call('db:seed', ['--force' => true]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Database seeded successfully',
+            'products_count' => \App\Models\Product::count(),
+            'categories_count' => \App\Models\Category::count(),
+            'output' => \Artisan::output(),
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage(),
+            'trace' => $e->getFile() . ':' . $e->getLine(),
+        ], 500);
+    }
+});
+
 // API routes for frontend JavaScript
 
 // Get newsroom stories (AJAX)

@@ -473,11 +473,40 @@ Route::middleware(['api.session'])->group(function () {
     Route::post('/api/store-intended-url', [AuthController::class, 'storeIntendedUrl'])->name('store.intended.url');
 });
 
+// Seed endpoint for initial cloud database setup
+Route::get('/seed-database-init', function () {
+    try {
+        if (\App\Models\Product::count() > 0) {
+            return response()->json([
+                'status' => 'already_seeded',
+                'products_count' => \App\Models\Product::count(),
+                'categories_count' => \App\Models\Category::count(),
+            ]);
+        }
+
+        \Artisan::call('db:seed', ['--force' => true]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Database seeded successfully',
+            'products_count' => \App\Models\Product::count(),
+            'categories_count' => \App\Models\Category::count(),
+            'output' => \Artisan::output(),
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage(),
+            'trace' => $e->getFile() . ':' . $e->getLine(),
+        ], 500);
+    }
+});
+
 // CMS Pages public routes (catch-all for valid slugs, but exclude specific routes)
 // Keep this BELOW specific routes like auth, products, etc., to avoid shadowing
 Route::get('/{slug}', [App\Http\Controllers\CmsPageController::class, 'show'])
     ->name('cms.show')
-    ->where('slug', '^(?!admin$|test-route$|health$|login$|verify-email-sent$|verify-email$|reset-password$|auth$|checkout$|account$|catalogue$|collections$|newsroom$|api$|contact$|privacy-policy$|terms-of-service$|corporate-responsibility$|help$|accessibility$|orders-payments$|track-order$|boutiques-appointments$)[a-zA-Z0-9\-]+$');
+    ->where('slug', '^(?!admin$|test-route$|health$|seed-database-init$|login$|verify-email-sent$|verify-email$|reset-password$|auth$|checkout$|account$|catalogue$|collections$|newsroom$|api$|contact$|privacy-policy$|terms-of-service$|corporate-responsibility$|help$|accessibility$|orders-payments$|track-order$|boutiques-appointments$)[a-zA-Z0-9\-]+$');
 
 // Cart routes (using web middleware for proper session handling)
 Route::middleware(['web'])->group(function () {
@@ -640,26 +669,6 @@ Route::get('/test-route', function () {
         'message' => 'Laravel route is working',
         'timestamp' => now(),
         'app_name' => config('app.name'),
-    ]);
-});
-
-// Seed endpoint for initial cloud database setup
-Route::get('/seed-database-init', function () {
-    if (\App\Models\Product::count() > 0) {
-        return response()->json([
-            'status' => 'already_seeded',
-            'products_count' => \App\Models\Product::count(),
-            'categories_count' => \App\Models\Category::count(),
-        ]);
-    }
-
-    \Artisan::call('db:seed', ['--force' => true]);
-
-    return response()->json([
-        'status' => 'success',
-        'message' => 'Database seeded successfully',
-        'products_count' => \App\Models\Product::count(),
-        'categories_count' => \App\Models\Category::count(),
     ]);
 });
 
