@@ -7,25 +7,33 @@ echo "Starting Laravel application..."
 export PORT=${PORT:-80}
 
 # Create .env file with environment variables from Docker Compose
-# Create .env file with environment variables from Render / Docker
+# Ensure APP_KEY exists before writing .env
+if [ -z "$APP_KEY" ]; then
+    echo "No APP_KEY passed in environment, generating one..."
+    export APP_KEY="base64:$(openssl rand -base64 32)"
+else
+    echo "Using existing APP_KEY from environment."
+fi
+
+# Create .env file with safely quoted environment variables
 echo "Creating .env file..."
 cat > .env << EOF
-APP_NAME="${APP_NAME:-Éclore Maison}"
+APP_NAME="${APP_NAME:-Eclore}"
 APP_ENV=${APP_ENV:-production}
 APP_DEBUG=${APP_DEBUG:-false}
-APP_KEY=${APP_KEY:-}
-APP_URL=${APP_URL:-http://localhost:$PORT}
+APP_KEY="${APP_KEY}"
+APP_URL="${APP_URL:-http://localhost:$PORT}"
 
 LOG_CHANNEL=stack
 LOG_LEVEL=${LOG_LEVEL:-error}
 
 DB_CONNECTION=${DB_CONNECTION:-pgsql}
-DB_HOST=${DB_HOST:-}
+DB_HOST="${DB_HOST:-}"
 DB_PORT=${DB_PORT:-5432}
-DB_DATABASE=${DB_DATABASE:-}
-DB_USERNAME=${DB_USERNAME:-}
-DB_PASSWORD=${DB_PASSWORD:-}
-DATABASE_URL=${DATABASE_URL:-}
+DB_DATABASE="${DB_DATABASE:-}"
+DB_USERNAME="${DB_USERNAME:-}"
+DB_PASSWORD="${DB_PASSWORD:-}"
+DATABASE_URL="${DATABASE_URL:-}"
 
 BROADCAST_DRIVER=log
 CACHE_DRIVER=${CACHE_DRIVER:-file}
@@ -35,35 +43,25 @@ QUEUE_CONNECTION=${QUEUE_CONNECTION:-sync}
 SESSION_DRIVER=${SESSION_DRIVER:-file}
 SESSION_LIFETIME=120
 
-REDIS_HOST=${REDIS_HOST:-}
-REDIS_PASSWORD=${REDIS_PASSWORD:-}
+REDIS_HOST="${REDIS_HOST:-}"
+REDIS_PASSWORD="${REDIS_PASSWORD:-}"
 REDIS_PORT=${REDIS_PORT:-6379}
 
 MAIL_MAILER=${MAIL_MAILER:-smtp}
-MAIL_HOST=${MAIL_HOST:-}
+MAIL_HOST="${MAIL_HOST:-}"
 MAIL_PORT=${MAIL_PORT:-587}
-MAIL_USERNAME=${MAIL_USERNAME:-}
-MAIL_PASSWORD=${MAIL_PASSWORD:-}
-MAIL_ENCRYPTION=${MAIL_ENCRYPTION:-tls}
-MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS:-info@eclorejewellery.com}
-MAIL_FROM_NAME=${MAIL_FROM_NAME:-"Éclore Maison"}
+MAIL_USERNAME="${MAIL_USERNAME:-}"
+MAIL_PASSWORD="${MAIL_PASSWORD:-}"
+MAIL_ENCRYPTION="${MAIL_ENCRYPTION:-tls}"
+MAIL_FROM_ADDRESS="${MAIL_FROM_ADDRESS:-info@eclorejewellery.com}"
+MAIL_FROM_NAME="Eclore"
 
-XENDIT_SECRET_KEY=${XENDIT_SECRET_KEY:-}
-XENDIT_PUBLIC_KEY=${XENDIT_PUBLIC_KEY:-}
-XENDIT_WEBHOOK_VERIFICATION_TOKEN=${XENDIT_WEBHOOK_VERIFICATION_TOKEN:-}
+XENDIT_SECRET_KEY="${XENDIT_SECRET_KEY:-}"
+XENDIT_PUBLIC_KEY="${XENDIT_PUBLIC_KEY:-}"
+XENDIT_WEBHOOK_VERIFICATION_TOKEN="${XENDIT_WEBHOOK_VERIFICATION_TOKEN:-}"
 
-VITE_APP_NAME="Éclore"
+VITE_APP_NAME="Eclore"
 EOF
-
-# Ensure APP_KEY exists
-if [ -z "$APP_KEY" ]; then
-    echo "No APP_KEY passed in environment, generating one..."
-    APP_KEY_VALUE="base64:$(openssl rand -base64 32)"
-    sed -i "s/^APP_KEY=.*/APP_KEY=$APP_KEY_VALUE/" .env
-    export APP_KEY="$APP_KEY_VALUE"
-else
-    echo "Using existing APP_KEY from environment."
-fi
 
 # Clear Laravel config cache
 echo "Clearing Laravel config cache..."

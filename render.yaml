@@ -16,7 +16,7 @@ services:
     healthCheckPath: /health
     envVars:
       - key: APP_NAME
-        value: "Éclore Maison"
+        value: Eclore
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
