@@ -11,7 +11,11 @@ class ProductSeeder extends Seeder
 {
     public function run(): void
     {
-        Product::query()->delete();
+        if (\Illuminate\Support\Facades\DB::getDriverName() === 'pgsql') {
+            \Illuminate\Support\Facades\DB::statement('TRUNCATE TABLE products RESTART IDENTITY CASCADE;');
+        } else {
+            Product::query()->delete();
+        }
 
         $subcategories = Category::whereNotNull('parent_id')->orderBy('category_order')->get();
 
@@ -241,6 +245,10 @@ class ProductSeeder extends Seeder
                     'updated_by' => 1,
                 ]);
             }
+        }
+
+        if (\Illuminate\Support\Facades\DB::getDriverName() === 'pgsql') {
+            \Illuminate\Support\Facades\DB::statement("SELECT setval(pg_get_serial_sequence('products', 'id'), coalesce((SELECT MAX(id) FROM products), 1));");
         }
     }
 }

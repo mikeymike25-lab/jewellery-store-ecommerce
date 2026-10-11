@@ -68,3 +68,5 @@ services:
         sync: false
       - key: XENDIT_WEBHOOK_VERIFICATION_TOKEN
         sync: false
+      - key: GEMINI_API_KEY
+        sync: false

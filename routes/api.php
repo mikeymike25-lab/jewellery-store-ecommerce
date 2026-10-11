@@ -9,7 +9,7 @@ Route::prefix('v1')->group(base_path('routes/api_v1.php'));
 
 Route::get('/seed-database-init', function () {
     try {
-        if (\App\Models\Product::count() > 0) {
+        if (!request()->has('force') && \App\Models\Product::count() > 0) {
             return response()->json([
                 'status' => 'already_seeded',
                 'products_count' => \App\Models\Product::count(),
@@ -17,14 +17,26 @@ Route::get('/seed-database-init', function () {
             ]);
         }
 
-        \Artisan::call('db:seed', ['--force' => true]);
+        \Artisan::call('db:seed', [
+            '--class' => 'CategorySeeder',
+            '--force' => true,
+        ]);
+
+        \Artisan::call('db:seed', [
+            '--class' => 'ProductSeeder',
+            '--force' => true,
+        ]);
+
+        \Artisan::call('db:seed', [
+            '--class' => 'EmployeeSeeder',
+            '--force' => true,
+        ]);
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Database seeded successfully',
+            'message' => 'Database seeded successfully with all products and images',
             'products_count' => \App\Models\Product::count(),
             'categories_count' => \App\Models\Category::count(),
-            'output' => \Artisan::output(),
         ]);
     } catch (\Throwable $e) {
         return response()->json([

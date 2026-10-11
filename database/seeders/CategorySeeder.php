@@ -4,13 +4,18 @@ namespace Database\Seeders;
 
 use App\Models\Category;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class CategorySeeder extends Seeder
 {
     public function run(): void
     {
-        Category::query()->delete();
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement('TRUNCATE TABLE categories RESTART IDENTITY CASCADE;');
+        } else {
+            Category::query()->delete();
+        }
 
         $categories = [
             // Main Categories
@@ -62,14 +67,20 @@ class CategorySeeder extends Seeder
             ['name' => 'Brooches & Pins', 'parent_id' => 5, 'category_order' => 25],
         ];
 
+        $nextId = 6;
         foreach ($subcategories as $sub) {
             Category::create([
+                'id' => $nextId++,
                 'name' => $sub['name'],
                 'slug' => Str::slug($sub['name']),
                 'parent_id' => $sub['parent_id'],
                 'category_order' => $sub['category_order'],
                 'is_active' => true,
             ]);
+        }
+
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement("SELECT setval(pg_get_serial_sequence('categories', 'id'), coalesce((SELECT MAX(id) FROM categories), 1));");
         }
     }
 }

@@ -68,6 +68,8 @@ MAIL_FROM_NAME="Eclore"
 XENDIT_SECRET_KEY="${XENDIT_SECRET_KEY:-}"
 XENDIT_PUBLIC_KEY="${XENDIT_PUBLIC_KEY:-}"
 XENDIT_WEBHOOK_VERIFICATION_TOKEN="${XENDIT_WEBHOOK_VERIFICATION_TOKEN:-}"
+GEMINI_API_KEY="${GEMINI_API_KEY:-}"
+GEMINI_MODEL="${GEMINI_MODEL:-gemini-2.5-flash}"
 
 VITE_APP_NAME="Eclore"
 EOF
@@ -90,6 +92,12 @@ mkdir -p bootstrap/cache
 # Set permissions
 chmod -R 775 storage bootstrap/cache
 php artisan storage:link || true
+
+# Ensure /assets points to /frontend/assets so both URLs serve product images
+if [ -d "public/frontend/assets" ] && [ ! -e "public/assets" ]; then
+    echo "Linking public/frontend/assets to public/assets..."
+    ln -s frontend/assets public/assets
+fi
 
 # Wait for database to be ready
 echo "Waiting for database connection..."
