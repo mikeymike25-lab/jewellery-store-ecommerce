@@ -10,6 +10,9 @@
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="{{ asset('frontend/assets/favicon.png') }}">
     
+    <!-- Alpine.js Plugins -->
+    <script defer src="https://unpkg.com/@alpinejs/persist@3.x.x/dist/cdn.min.js"></script>
+
     <!-- Alpine.js -->
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     
@@ -33,7 +36,12 @@
                         const formData = new FormData(form);
                         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || form.querySelector('input[name="_token"]')?.value;
                         
-                        const response = await fetch('{{ admin_route("login") }}', {
+                        let targetUrl = '{{ admin_route("login") }}';
+                        if (!targetUrl || targetUrl.includes('.test')) {
+                            targetUrl = '/admin/login';
+                        }
+
+                        const response = await fetch(targetUrl, {
                             method: 'POST',
                             body: formData,
                             credentials: 'include',
@@ -87,7 +95,12 @@
                     this.errorMessage = '';
                     
                     try {
-                        const response = await fetch('{{ admin_route("verify-otp.post") }}', {
+                        let targetUrl = '{{ admin_route("verify-otp.post") }}';
+                        if (!targetUrl || targetUrl.includes('.test')) {
+                            targetUrl = '/admin/verify-otp';
+                        }
+
+                        const response = await fetch(targetUrl, {
                             method: 'POST',
                             credentials: 'include',
                             headers: {
@@ -110,7 +123,7 @@
                             this.errorMessage = data.message || 'Invalid verification code.';
                         }
                     } catch (error) {
-                        this.errorMessage = 'An error occurred. Please try again.';
+                        this.errorMessage = error.message || 'An error occurred. Please try again.';
                     } finally {
                         this.isLoading = false;
                     }
@@ -121,7 +134,12 @@
                     this.errorMessage = '';
                     
                     try {
-                        const response = await fetch('{{ admin_route("resend-otp") }}', {
+                        let targetUrl = '{{ admin_route("resend-otp") }}';
+                        if (!targetUrl || targetUrl.includes('.test')) {
+                            targetUrl = '/admin/resend-otp';
+                        }
+
+                        const response = await fetch(targetUrl, {
                             method: 'POST',
                             credentials: 'include',
                             headers: {
