@@ -111,6 +111,7 @@ php artisan config:show app.key
 
 # Configure Apache for the correct port
 echo "Configuring Apache for port $PORT..."
+echo "ServerName localhost" >> /etc/apache2/apache2.conf
 if [ "$PORT" != "80" ]; then
     sed -i "s/Listen 80/Listen $PORT/" /etc/apache2/ports.conf
     sed -i "s/<VirtualHost \*:80>/<VirtualHost *:$PORT>/" /etc/apache2/sites-available/000-default.conf
@@ -120,22 +121,8 @@ fi
 echo "Testing Apache configuration..."
 apache2ctl configtest
 
-# Start Apache
-echo "Starting Apache on port $PORT..."
-apache2ctl start
-
-# Wait a moment and check if Apache is running
-sleep 3
-if pgrep apache2 > /dev/null; then
-    echo "Apache started successfully"
-    echo "Server is available at: http://0.0.0.0:$PORT"
-    echo "Health endpoint: http://0.0.0.0:$PORT/health"
-    
-    # Keep Apache running in foreground
-    apache2ctl -D FOREGROUND
-else
-    echo "Apache failed to start"
-    echo "Checking Apache error logs..."
-    tail -20 /var/log/apache2/error.log
-    exit 1
-fi
+# Start Apache directly in foreground as main container process
+echo "Starting Apache on port $PORT in foreground..."
+echo "Server is available at: http://0.0.0.0:$PORT"
+echo "Health endpoint: http://0.0.0.0:$PORT/health"
+exec apache2ctl -D FOREGROUND
