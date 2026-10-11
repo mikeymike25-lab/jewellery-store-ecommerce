@@ -72,7 +72,7 @@ RUN npm install --legacy-peer-deps --verbose
 RUN npm run build
 
 # Configure Apache
-COPY .docker/apache/000-default.conf /etc/apache2/sites-available/000-default.conf
+COPY docker/000-default.conf /etc/apache2/sites-available/000-default.conf
 RUN a2ensite 000-default.conf
 
 # Set permissions

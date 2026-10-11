@@ -39,7 +39,6 @@ README.md
 *.md
 
 # Docker files
-.docker/
 .dockerignore
 
 # Railway files
