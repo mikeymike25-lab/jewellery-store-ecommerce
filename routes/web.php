@@ -643,6 +643,26 @@ Route::get('/test-route', function () {
     ]);
 });
 
+// Seed endpoint for initial cloud database setup
+Route::get('/seed-database-init', function () {
+    if (\App\Models\Product::count() > 0) {
+        return response()->json([
+            'status' => 'already_seeded',
+            'products_count' => \App\Models\Product::count(),
+            'categories_count' => \App\Models\Category::count(),
+        ]);
+    }
+
+    \Artisan::call('db:seed', ['--force' => true]);
+
+    return response()->json([
+        'status' => 'success',
+        'message' => 'Database seeded successfully',
+        'products_count' => \App\Models\Product::count(),
+        'categories_count' => \App\Models\Category::count(),
+    ]);
+});
+
 // Enhanced health check endpoint for Docker Compose
 Route::get('/health', function () {
     try {
