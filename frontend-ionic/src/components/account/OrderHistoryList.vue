@@ -13,6 +13,8 @@ const emit = defineEmits<{
 const ordersStore = useOrdersStore();
 const activeFilter = ref<'all' | 'processing' | 'delivered' | 'cancelled'>('all');
 const downloadingOrderNumber = ref<string | null>(null);
+const downloadSuccessOrderNumber = ref<string | null>(null);
+const downloadErrorOrderNumber = ref<string | null>(null);
 const downloadError = ref('');
 
 onMounted(() => {
@@ -31,14 +33,26 @@ const filteredOrders = computed(() => {
 async function handleDownloadReceipt(order: Order, event: Event) {
   event.stopPropagation();
   downloadError.value = '';
+  downloadErrorOrderNumber.value = null;
+  downloadSuccessOrderNumber.value = null;
   downloadingOrderNumber.value = order.order_number;
   try {
     await ordersStore.downloadReceiptPdf(order.order_number);
+    downloadSuccessOrderNumber.value = order.order_number;
+    setTimeout(() => {
+      if (downloadSuccessOrderNumber.value === order.order_number) {
+        downloadSuccessOrderNumber.value = null;
+      }
+    }, 4000);
   } catch (err: any) {
     downloadError.value = err.message || 'Receipt could not be downloaded.';
+    downloadErrorOrderNumber.value = order.order_number;
     setTimeout(() => {
-      downloadError.value = '';
-    }, 4000);
+      if (downloadErrorOrderNumber.value === order.order_number) {
+        downloadError.value = '';
+        downloadErrorOrderNumber.value = null;
+      }
+    }, 5000);
   } finally {
     downloadingOrderNumber.value = null;
   }
@@ -195,9 +209,9 @@ function formatStatusBadge(status: string) {
           <div class="flex flex-wrap items-center gap-2">
             <!-- Receipt Download CTA -->
             <button
-              v-if="order.payment_status === 'paid'"
+              v-if="order.payment_status && order.payment_status.toLowerCase() === 'paid'"
               type="button"
-              class="inline-flex items-center px-3 py-2 text-xs font-azeret uppercase tracking-wider text-[#1A1A1A] hover:text-[#B6965D] border border-[#E2DDD5] hover:border-[#B6965D] transition-colors"
+              class="inline-flex items-center px-3 py-2 text-xs font-azeret uppercase tracking-wider text-[#1A1A1A] hover:text-[#B6965D] border border-[#E2DDD5] hover:border-[#B6965D] transition-colors disabled:opacity-50"
               :disabled="downloadingOrderNumber === order.order_number"
               @click="handleDownloadReceipt(order, $event)"
             >
@@ -221,6 +235,14 @@ function formatStatusBadge(status: string) {
             <EcloreButton variant="primary" size="sm" @click="emit('view-order', order)">
               View Details
             </EcloreButton>
+          </div>
+
+          <!-- Feedback for Receipt -->
+          <div v-if="downloadError && downloadErrorOrderNumber === order.order_number" class="w-full mt-2 p-2 text-xs bg-red-50 text-red-700 border border-red-200 font-azeret">
+            {{ downloadError }}
+          </div>
+          <div v-if="downloadSuccessOrderNumber === order.order_number" class="w-full mt-2 p-2 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 font-azeret">
+            Official tax receipt downloaded successfully.
           </div>
         </div>
 

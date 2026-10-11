@@ -10,6 +10,7 @@ import CartDrawer from '@/components/CartDrawer.vue';
 import WishlistDrawer from '@/components/WishlistDrawer.vue';
 import NoupeConciergeModal from '@/components/NoupeConciergeModal.vue';
 import EcloreBottomNav from '@/components/EcloreBottomNav.vue';
+import AuthModal from '@/components/AuthModal.vue';
 
 const authStore = useAuthStore();
 const cartStore = useCartStore();
@@ -43,5 +44,13 @@ onMounted(async () => {
     <CartDrawer />
     <WishlistDrawer />
     <NoupeConciergeModal />
+    <!-- Global Authentication Modal -->
+    <AuthModal
+      :is-open="authStore.isAuthModalOpen"
+      :reason="authStore.authModalReason"
+      :initial-mode="authStore.authModalMode"
+      @close="authStore.closeAuthModal()"
+      @success="authStore.closeAuthModal()"
+    />
   </ion-app>
 </template>

@@ -66,7 +66,7 @@ function handleClearCart() {
 function handleProceedToCheckout() {
   if (!isAuthenticated.value) {
     authStore.setIntendedRoute('/checkout');
-    router.push('/tabs/account');
+    authStore.openAuthModal('Please sign in to proceed to acquisition.');
     return;
   }
   router.push('/checkout');
@@ -74,7 +74,7 @@ function handleProceedToCheckout() {
 
 function navigateToLogin() {
   authStore.setIntendedRoute('/tabs/coffret');
-  router.push('/tabs/account');
+  authStore.openAuthModal('Please sign in to access your Coffret.');
 }
 
 onIonViewWillEnter(async () => {

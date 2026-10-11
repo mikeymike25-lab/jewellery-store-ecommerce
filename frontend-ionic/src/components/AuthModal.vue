@@ -7,11 +7,13 @@ import { useAuthStore } from '@/stores/auth.store';
 interface Props {
   isOpen: boolean;
   initialMode?: 'signin' | 'signup' | 'forgot';
+  reason?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isOpen: false,
   initialMode: 'signin',
+  reason: '',
 });
 
 const emit = defineEmits<{
@@ -22,15 +24,21 @@ const emit = defineEmits<{
 const authStore = useAuthStore();
 
 // Active mode: 'signin' | 'signup' | 'forgot'
-const mode = ref<'signin' | 'signup' | 'forgot'>(props.initialMode);
+const mode = ref<'signin' | 'signup' | 'forgot'>(authStore.authModalMode || props.initialMode);
 
 watch(() => props.initialMode, (newMode) => {
   mode.value = newMode;
 });
 
+watch(() => authStore.authModalMode, (newMode) => {
+  if (newMode) {
+    mode.value = newMode;
+  }
+});
+
 watch(() => props.isOpen, (open) => {
   if (open) {
-    mode.value = props.initialMode;
+    mode.value = authStore.authModalMode || props.initialMode;
     clearErrors();
   }
 });
@@ -264,6 +272,12 @@ async function handleResetPassword() {
           Back to Sign In
         </button>
         <span class="font-azeret text-[10px] uppercase tracking-widest text-[#B6965D]">Recovery</span>
+      </div>
+
+      <!-- Action Requirement Notice -->
+      <div v-if="props.reason || authStore.authModalReason" class="p-3 bg-[#FAF8F5] border border-[#B6965D] text-xs text-[#1A1A1A] font-azeret flex items-center gap-2.5">
+        <svg class="w-4 h-4 text-[#B6965D] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+        <span class="tracking-wide">{{ props.reason || authStore.authModalReason }}</span>
       </div>
 
       <!-- Feedback Banners -->

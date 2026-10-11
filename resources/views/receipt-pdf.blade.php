@@ -158,8 +158,16 @@
                 <div class="tin-badge" style="margin-top: 3px;">BIR Tax Registration TIN: 009-482-192-000</div>
             </td>
             <td style="text-align: right; vertical-align: middle;">
-                <div class="receipt-badge">OFFICIAL TAX RECEIPT</div>
-                <div style="font-size: 10px; color: #767676; margin-top: 5px;">Payment Status: <strong style="color: #2e7d32;">PAID</strong></div>
+                @php
+                    $isPaid = strtolower((string) ($order->payment_status ?? '')) === 'paid';
+                @endphp
+                @if($isPaid)
+                    <div class="receipt-badge">OFFICIAL TAX RECEIPT</div>
+                    <div style="font-size: 10px; color: #767676; margin-top: 5px;">Payment Status: <strong style="color: #2e7d32;">PAID</strong></div>
+                @else
+                    <div class="receipt-badge" style="background-color: #F8F7F2; border-color: #888; color: #333;">OFFICIAL ORDER INVOICE</div>
+                    <div style="font-size: 10px; color: #767676; margin-top: 5px;">Payment Status: <strong style="color: #b45309; text-transform: uppercase;">{{ $order->payment_status ?? 'PENDING' }}</strong></div>
+                @endif
             </td>
         </tr>
     </table>
@@ -286,7 +294,7 @@
         </tr>
         @endif
         <tr class="total-row">
-            <td>TOTAL PAID:</td>
+            <td>{{ $isPaid ? 'TOTAL PAID:' : 'TOTAL PAYABLE:' }}</td>
             <td class="text-right total-amount">&#8369;{{ number_format($order->total_amount, 2) }}</td>
         </tr>
     </table>

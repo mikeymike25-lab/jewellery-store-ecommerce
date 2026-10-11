@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { apiClient } from '@/api/client';
 import { Preferences } from '@capacitor/preferences';
+import { useAuthStore } from '@/stores/auth.store';
 import type { CartItem } from '@/types';
 
 const SELECTED_CART_IDS_KEY = 'eclore_selected_cart_ids';
@@ -169,6 +170,11 @@ export const useCartStore = defineStore('cart', {
     },
 
     async addToCart(productId: number, quantity = 1, options?: { ring_size?: string; metal_type?: string }) {
+      const authStore = useAuthStore();
+      if (!authStore.isAuthenticated) {
+        authStore.openAuthModal('Please sign in to add creations to your Coffret.');
+        return;
+      }
       this.loading = true;
       this.error = null;
       try {
@@ -259,6 +265,11 @@ export const useCartStore = defineStore('cart', {
      * Isolates the single item for checkout bypass without clearing the shopping bag.
      */
     async buyNow(productId: number, quantity = 1, options?: { ring_size?: string; metal_type?: string }): Promise<void> {
+      const authStore = useAuthStore();
+      if (!authStore.isAuthenticated) {
+        authStore.openAuthModal('Please sign in to proceed to acquisition.');
+        return;
+      }
       this.loading = true;
       try {
         // Add to cart to ensure server has the record

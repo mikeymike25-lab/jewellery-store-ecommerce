@@ -7,6 +7,7 @@ import { App } from '@capacitor/app';
 import { apiClient } from '@/api/client';
 import { useCartStore } from '@/stores/cart.store';
 import { useOrdersStore } from '@/stores/orders.store';
+import { useAuthStore } from '@/stores/auth.store';
 import EcloreHeader from '@/components/EcloreHeader.vue';
 import EcloreFooter from '@/components/EcloreFooter.vue';
 import EcloreButton from '@/components/EcloreButton.vue';
@@ -15,6 +16,7 @@ const route = useRoute();
 const router = useRouter();
 const cartStore = useCartStore();
 const ordersStore = useOrdersStore();
+const authStore = useAuthStore();
 
 const orderNumber = computed(() => (route.params.orderNumber as string) || (route.query.order as string) || '');
 const invoiceUrl = computed(() => (route.query.invoice_url as string) || '');
@@ -178,6 +180,31 @@ function goToAccountOrders() {
   router.push('/tabs/account');
 }
 
+const isDownloadingReceipt = ref(false);
+const receiptError = ref('');
+const receiptSuccess = ref(false);
+
+async function handleDownloadReceipt() {
+  if (!orderNumber.value) return;
+  receiptError.value = '';
+  receiptSuccess.value = false;
+  isDownloadingReceipt.value = true;
+  try {
+    await ordersStore.downloadReceiptPdf(orderNumber.value);
+    receiptSuccess.value = true;
+    setTimeout(() => {
+      receiptSuccess.value = false;
+    }, 5000);
+  } catch (err: any) {
+    receiptError.value = err.message || 'Receipt could not be downloaded.';
+    setTimeout(() => {
+      receiptError.value = '';
+    }, 6000);
+  } finally {
+    isDownloadingReceipt.value = false;
+  }
+}
+
 // Window focus event to immediately re-check status when user returns to tab
 function handleWindowFocus() {
   if (paymentStatus.value === 'pending') {
@@ -296,6 +323,29 @@ onUnmounted(() => {
             <p class="font-sans text-sm text-stone-600 max-w-md mx-auto leading-relaxed font-light mb-10">
               Your exquisite selection is now officially in preparation in our atelier. A formal confirmation and armored courier tracking link have been dispatched to your email.
             </p>
+
+            <!-- Receipt download for paid customers -->
+            <div v-if="paymentStatus === 'paid' || authStore.isAuthenticated" class="mb-8">
+              <EcloreButton
+                variant="outline"
+                size="md"
+                class="w-full sm:w-auto mx-auto inline-flex items-center justify-center space-x-2"
+                :disabled="isDownloadingReceipt"
+                @click="handleDownloadReceipt"
+              >
+                <svg class="w-4 h-4 mr-1 text-[#B6965D]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span>{{ isDownloadingReceipt ? 'Generating Receipt...' : 'Download Official Tax Receipt' }}</span>
+              </EcloreButton>
+
+              <div v-if="receiptError" class="mt-3 max-w-sm mx-auto p-2 text-xs bg-red-50 text-red-700 border border-red-200 font-azeret">
+                {{ receiptError }}
+              </div>
+              <div v-if="receiptSuccess" class="mt-3 max-w-sm mx-auto p-2 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 font-azeret">
+                Official tax receipt downloaded successfully.
+              </div>
+            </div>
 
             <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
               <EcloreButton

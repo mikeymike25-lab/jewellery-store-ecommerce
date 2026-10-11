@@ -6,6 +6,7 @@ import EcloreButton from '@/components/EcloreButton.vue';
 import CurrencyDisplay from '@/components/CurrencyDisplay.vue';
 import { useCartStore } from '@/stores/cart.store';
 import { useWishlistStore } from '@/stores/wishlist.store';
+import { useAuthStore } from '@/stores/auth.store';
 import type { Product } from '@/types';
 import { getProductImage } from '@/utils/product-image';
 
@@ -22,12 +23,17 @@ const emit = defineEmits<{
 const router = useRouter();
 const cartStore = useCartStore();
 const wishlistStore = useWishlistStore();
+const authStore = useAuthStore();
 const selectedSize = ref('7');
 const adding = ref(false);
 const addedSuccess = ref(false);
 
 async function handleAddToCart() {
   if (!props.product) return;
+  if (!authStore.isAuthenticated) {
+    authStore.openAuthModal('Sign in to add creations to your shopping bag.');
+    return;
+  }
   adding.value = true;
   try {
     await cartStore.addToCart(props.product.id, 1, { ring_size: selectedSize.value });
@@ -45,6 +51,10 @@ async function handleAddToCart() {
 
 async function handleToggleWishlist() {
   if (!props.product) return;
+  if (!authStore.isAuthenticated) {
+    authStore.openAuthModal('Sign in to curate your personal wishlist.');
+    return;
+  }
   try {
     await wishlistStore.toggleItem(props.product);
   } catch (err) {
@@ -65,12 +75,13 @@ function viewFullDetails() {
     :title="product?.name || 'Quick View'"
     subtitle="Atelier Creation"
     max-width="max-w-2xl"
+    close-label="Back"
     @close="emit('close')"
   >
-    <div v-if="product" class="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+    <div v-if="product" class="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2 pb-2">
       <!-- Image -->
-      <div class="aspect-square bg-stone-50 border border-[#E2DDD5] flex items-center justify-center overflow-hidden p-4">
-        <img :src="getProductImage(product)" :alt="product.name" class="w-full h-full object-contain" />
+      <div class="h-44 sm:h-auto sm:aspect-square bg-stone-50 border border-[#E2DDD5] flex items-center justify-center overflow-hidden p-3 rounded-sm">
+        <img :src="getProductImage(product)" :alt="product.name" class="max-h-full max-w-full object-contain" />
       </div>
 
       <!-- Details -->
@@ -79,14 +90,14 @@ function viewFullDetails() {
           <span class="font-azeret text-[10px] uppercase tracking-widest text-[#B6965D]">
             {{ product.category?.name || 'Fine Jewellery' }}
           </span>
-          <h3 class="font-playfair text-2xl text-[#1A1A1A] mt-1">{{ product.name }}</h3>
+          <h3 class="font-playfair text-xl sm:text-2xl text-[#1A1A1A] mt-1">{{ product.name }}</h3>
           
-          <div class="mt-3">
+          <div class="mt-2.5">
             <CurrencyDisplay :amount="product.final_price || product.price || product.base_price" size="xl" bold />
             <span class="ml-2 font-azeret text-[10px] text-stone-500 uppercase">VAT Included</span>
           </div>
 
-          <p class="font-azeret text-xs text-stone-600 mt-3 line-clamp-3 leading-relaxed">
+          <p class="font-azeret text-xs text-stone-600 mt-2.5 line-clamp-3 leading-relaxed">
             {{ product.description || 'Masterfully handcrafted with certified materials in our private atelier.' }}
           </p>
 
@@ -108,7 +119,7 @@ function viewFullDetails() {
           </div>
         </div>
 
-        <div class="space-y-2 pt-4">
+        <div class="space-y-2 pt-3">
           <div class="flex items-center gap-3">
             <div class="relative flex-grow">
               <EcloreButton variant="primary" block :loading="adding" @click="handleAddToCart">
@@ -144,9 +155,18 @@ function viewFullDetails() {
             </button>
           </div>
 
-          <EcloreButton variant="ghost" size="sm" block @click="viewFullDetails">
-            View Full Atelier Specifications &rarr;
-          </EcloreButton>
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <EcloreButton variant="ghost" size="sm" block @click="viewFullDetails">
+              Full Details &rarr;
+            </EcloreButton>
+            <button
+              type="button"
+              class="w-full text-center py-2 px-3 text-[11px] font-azeret uppercase tracking-wider text-stone-500 hover:text-black border border-[#E2DDD5] hover:border-black rounded transition-colors"
+              @click="emit('close')"
+            >
+              &larr; Back / Close
+            </button>
+          </div>
         </div>
       </div>
     </div>

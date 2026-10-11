@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 
 interface FilterState {
   color?: string;
@@ -32,6 +32,25 @@ const selectedGemstone = ref(props.activeFilters.gemstone || '');
 const selectedDiamonds = ref(props.activeFilters.diamonds || '');
 const selectedPrice = ref(props.activeFilters.price || '');
 const selectedCategory = ref(props.activeFilters.category || '');
+
+function syncFromProps() {
+  selectedColor.value = props.activeFilters?.color || '';
+  selectedMaterial.value = props.activeFilters?.material || '';
+  selectedGemstone.value = props.activeFilters?.gemstone || '';
+  selectedDiamonds.value = props.activeFilters?.diamonds || '';
+  selectedPrice.value = props.activeFilters?.price || '';
+  selectedCategory.value = props.activeFilters?.category || '';
+}
+
+watch(() => props.isOpen, (open) => {
+  if (open) {
+    syncFromProps();
+  }
+});
+
+watch(() => props.activeFilters, () => {
+  syncFromProps();
+}, { deep: true });
 
 const colorOptions = [
   { label: 'Yellow Gold', value: 'yellow gold' },
@@ -105,14 +124,18 @@ function resetFilters() {
 </script>
 
 <template>
-  <Transition name="drawer">
-    <div
-      v-if="isOpen"
-      class="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-xs"
-      @click.self="emit('close')"
-    >
-      <div class="w-full max-w-md bg-[#F3EFE7] h-full shadow-2xl flex flex-col justify-between border-l border-[#E2DDD5] overflow-hidden">
-        <!-- Header -->
+  <Teleport to="body">
+    <Transition name="drawer">
+      <div
+        v-if="isOpen"
+        class="fixed inset-0 z-[9999] flex justify-end bg-black/60 backdrop-blur-xs"
+        @click.self="emit('close')"
+      >
+        <div
+          class="w-full max-w-md bg-[#F3EFE7] h-full h-screen shadow-2xl flex flex-col border-l border-[#E2DDD5] overflow-hidden"
+          style="height: 100dvh; max-height: 100dvh;"
+        >
+          <!-- Header -->
         <div class="p-6 border-b border-[#E2DDD5] flex items-center justify-between">
           <div>
             <span class="font-azeret text-[10px] uppercase tracking-widest text-[#B6965D]">Atelier Facets</span>
@@ -131,7 +154,7 @@ function resetFilters() {
         </div>
 
         <!-- Facets Body -->
-        <div class="flex-grow overflow-y-auto p-6 space-y-6 font-azeret">
+        <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain p-6 space-y-6 font-azeret">
           <!-- Category -->
           <div>
             <h4 class="text-xs uppercase tracking-widest text-[#1A1A1A] mb-3 font-semibold">Category</h4>
@@ -236,17 +259,17 @@ function resetFilters() {
         </div>
 
         <!-- Footer Actions -->
-        <div class="p-6 border-t border-[#E2DDD5] bg-[#EBE6DC] flex items-center gap-4">
+        <div class="p-4 sm:p-6 border-t border-[#E2DDD5] bg-[#EBE6DC] flex items-center gap-3 shrink-0 sticky bottom-0 z-10 pb-[max(1.5rem,calc(env(safe-area-inset-bottom,0px)+1.25rem))]">
           <button
             type="button"
-            class="flex-1 min-h-[48px] py-3.5 px-6 rounded-full border border-[#B6965D] text-[#B6965D] hover:bg-[#B6965D]/15 bg-transparent font-azeret text-xs uppercase tracking-[0.2em] font-bold transition-all shadow-xs active:scale-95 inline-flex items-center justify-center"
+            class="flex-1 min-h-[48px] py-3.5 px-4 rounded-full border border-[#B6965D] text-[#B6965D] hover:bg-[#B6965D]/15 bg-white font-azeret text-xs uppercase tracking-[0.18em] font-bold transition-all shadow-xs active:scale-95 inline-flex items-center justify-center cursor-pointer"
             @click="resetFilters"
           >
             Reset All
           </button>
           <button
             type="button"
-            class="flex-1 min-h-[48px] py-3.5 px-6 rounded-full bg-[#B6965D] hover:bg-[#9A7E4D] text-white border border-[#B6965D] font-azeret text-xs uppercase tracking-[0.2em] font-bold transition-all shadow-md active:scale-95 inline-flex items-center justify-center gap-2.5"
+            class="flex-1 min-h-[48px] py-3.5 px-4 rounded-full bg-[#B6965D] hover:bg-[#9A7E4D] text-white border border-[#B6965D] font-azeret text-xs uppercase tracking-[0.18em] font-bold transition-all shadow-md active:scale-95 inline-flex items-center justify-center gap-2 cursor-pointer"
             @click="applyFilters"
           >
             <span class="w-1.5 h-1.5 rounded-full bg-white inline-block flex-shrink-0"></span>
@@ -256,6 +279,7 @@ function resetFilters() {
       </div>
     </div>
   </Transition>
+  </Teleport>
 </template>
 
 <style scoped>

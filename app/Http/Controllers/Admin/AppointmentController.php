@@ -74,7 +74,38 @@ class AppointmentController extends Controller
             'status' => 'required|in:pending,confirmed,completed,cancelled',
         ]);
 
+        $previousStatus = $appointment->status;
         $appointment->update(['status' => $request->status]);
+
+        // Send customer notification if status changed and patron has a linked user
+        if ($previousStatus !== $request->status) {
+            $userId = $appointment->user_id;
+            if (! $userId) {
+                $user = \App\Models\User::where('email', $appointment->email)->first();
+                $userId = $user?->id;
+            }
+
+            if ($userId) {
+                $statusLabel = ucfirst($request->status);
+                \App\Models\Notification::create([
+                    'type' => 'system',
+                    'recipient_type' => 'user',
+                    'recipient_id' => $userId,
+                    'title' => "Salon Appointment {$statusLabel}",
+                    'message' => "Your salon appointment at {$appointment->location} on {$appointment->appointment_date} at {$appointment->appointment_time} is now {$statusLabel}.",
+                    'data' => [
+                        'appointment_id' => $appointment->id,
+                        'service_type' => $appointment->service_type,
+                        'location' => $appointment->location,
+                        'appointment_date' => $appointment->appointment_date,
+                        'appointment_time' => $appointment->appointment_time,
+                        'status' => $appointment->status,
+                        'type' => 'appointment',
+                    ],
+                    'status' => 'sent',
+                ]);
+            }
+        }
 
         if ($request->expectsJson()) {
             return response()->json([

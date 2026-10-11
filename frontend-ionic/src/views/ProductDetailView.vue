@@ -113,8 +113,7 @@ async function loadProduct(forceRefresh = false) {
 async function handleAddToCart() {
   if (!product.value) return;
   if (!authStore.isAuthenticated) {
-    authStore.setIntendedRoute(route.fullPath);
-    router.push('/tabs/account');
+    authStore.openAuthModal('Please sign in to add creations to your Coffret.');
     return;
   }
   addingToCart.value = true;
@@ -137,8 +136,7 @@ async function handleAddToCart() {
 async function handleBuyNow() {
   if (!product.value) return;
   if (!authStore.isAuthenticated) {
-    authStore.setIntendedRoute('/checkout');
-    router.push('/tabs/account');
+    authStore.openAuthModal('Please sign in to proceed to acquisition.');
     return;
   }
   buyingNow.value = true;
@@ -157,6 +155,10 @@ async function handleBuyNow() {
 
 async function handleToggleWishlist() {
   if (!product.value) return;
+  if (!authStore.isAuthenticated) {
+    authStore.openAuthModal('Please sign in to save creations to your Wishlist.');
+    return;
+  }
   try {
     await wishlistStore.toggleItem(product.value);
   } catch (err) {

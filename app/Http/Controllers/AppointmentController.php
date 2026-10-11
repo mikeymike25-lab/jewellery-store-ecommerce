@@ -23,10 +23,41 @@ class AppointmentController extends Controller
             'notes' => 'nullable|string',
         ]);
 
+        $user = $request->user() ?: auth()->user();
+        $userId = $user?->id;
+        if (! $userId) {
+            $matchedUser = \App\Models\User::where('email', $validated['email'])->first();
+            $userId = $matchedUser?->id;
+        }
+
         $appointment = Appointment::create(array_merge($validated, [
-            'user_id' => auth()->id(),
+            'user_id' => $userId,
             'status' => 'pending',
         ]));
+
+        // Create in-app customer notification if a user account is linked
+        try {
+            if ($userId) {
+                \App\Models\Notification::create([
+                    'type' => 'system',
+                    'recipient_type' => 'user',
+                    'recipient_id' => $userId,
+                    'title' => 'Salon Appointment Requested',
+                    'message' => "Your salon appointment at {$appointment->location} on {$appointment->appointment_date} at {$appointment->appointment_time} is being coordinated by our concierge.",
+                    'data' => [
+                        'appointment_id' => $appointment->id,
+                        'service_type' => $appointment->service_type,
+                        'location' => $appointment->location,
+                        'appointment_date' => $appointment->appointment_date,
+                        'appointment_time' => $appointment->appointment_time,
+                        'type' => 'appointment',
+                    ],
+                    'status' => 'sent',
+                ]);
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('Failed to create user appointment notification: ' . $e->getMessage());
+        }
 
         if ($request->ajax() || $request->wantsJson() || $request->is('api/*')) {
             return response()->json([

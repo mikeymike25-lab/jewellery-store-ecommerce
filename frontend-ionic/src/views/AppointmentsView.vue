@@ -7,6 +7,7 @@ import EcloreFooter from '@/components/EcloreFooter.vue';
 import EcloreButton from '@/components/EcloreButton.vue';
 import { apiClient } from '@/api/client';
 import { useAuthStore } from '@/stores/auth.store';
+import { useNotificationsStore } from '@/stores/notifications.store';
 
 interface Boutique {
   id: number;
@@ -26,6 +27,7 @@ interface Boutique {
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
+const notificationsStore = useNotificationsStore();
 
 const boutiques = ref<Boutique[]>([]);
 const loadingBoutiques = ref(false);
@@ -192,6 +194,13 @@ async function handleBookAppointment() {
 
     const res = await apiClient.post<{ success: boolean; message: string; data: any }>('/v1/appointments/book', payload);
     confirmedAppointment.value = res.data?.data || payload;
+
+    // Refresh notifications immediately so user sees appointment alert
+    if (authStore.isAuthenticated) {
+      notificationsStore.fetchNotifications(true).catch(() => {});
+      notificationsStore.fetchUnreadCount(true).catch(() => {});
+    }
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
   } catch (err: any) {
     submitError.value = err.response?.data?.message || 'Failed to reserve appointment. Please verify details.';

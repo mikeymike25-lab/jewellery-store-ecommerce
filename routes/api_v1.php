@@ -113,6 +113,7 @@ Route::get('/orders/{orderNumber}/status', [ApiCheckoutController::class, 'statu
 Route::get('/orders/{orderNumber}', [ApiCheckoutController::class, 'show'])->name('api.v1.orders.show');
 Route::post('/orders/track', [OrderController::class, 'trackOrderApi'])->name('api.v1.orders.track');
 Route::post('/orders/{orderNumber}/simulate-payment', [ApiCheckoutController::class, 'simulatePayment'])->name('api.v1.orders.simulate-payment');
+Route::get('/orders/{orderNumber}/receipt-pdf', [AccountController::class, 'downloadReceiptPdf'])->name('api.v1.orders.receipt-pdf');
 
 // ==========================================
 // 7. Customer Account (Sanctum Protected)

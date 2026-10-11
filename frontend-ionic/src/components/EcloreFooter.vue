@@ -10,22 +10,49 @@ const subscribing = ref(false);
 const subscriptionMessage = ref('');
 const subscriptionError = ref('');
 
-async function handleSubscribe() {
-  if (!newsletterEmail.value.trim()) return;
+async function handleSubscribe(e?: Event) {
+  if (e) {
+    e.preventDefault();
+  }
+  if (subscribing.value) return;
+  const cleanEmail = newsletterEmail.value.trim();
+  if (!cleanEmail) {
+    subscriptionError.value = 'Please enter your email address.';
+    return;
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(cleanEmail)) {
+    subscriptionError.value = 'Please enter a valid email address.';
+    return;
+  }
+
   subscribing.value = true;
   subscriptionError.value = '';
+  subscribed.value = false;
   try {
-    const res = await apiClient.post<{ success: boolean; message: string }>('/v1/newsletter/subscribe', {
-      email: newsletterEmail.value.trim(),
-    });
+    let res;
+    try {
+      res = await apiClient.post<{ success: boolean; message: string }>('/v1/newsletter/subscribe', {
+        email: cleanEmail,
+      });
+    } catch (apiErr: any) {
+      if (apiErr.response?.status === 404) {
+        res = await apiClient.post<{ success: boolean; message: string }>('/newsletter/subscribe', {
+          email: cleanEmail,
+        });
+      } else {
+        throw apiErr;
+      }
+    }
+
     subscribed.value = true;
     subscriptionMessage.value = res.data?.message || 'Thank you for subscribing to the Éclore Gazette.';
     newsletterEmail.value = '';
     setTimeout(() => {
       subscribed.value = false;
-    }, 5000);
+    }, 7000);
   } catch (err: any) {
-    subscriptionError.value = err.response?.data?.message || 'Could not enroll email. Please check the address format.';
+    subscriptionError.value = err.response?.data?.message || err.message || 'Could not enroll email. Please check your connection.';
   } finally {
     subscribing.value = false;
   }
@@ -75,25 +102,28 @@ function navigateTo(path: string) {
             <button
               type="submit"
               :disabled="subscribing"
-              class="bg-black text-white hover:bg-stone-900 py-2.5 min-h-[40px] text-[10px] sm:text-[11px] tracking-[0.15em] uppercase font-azeret font-bold inline-flex items-center justify-center gap-2 transition-all flex-shrink-0 shadow-sm active:scale-95 disabled:opacity-50"
+              class="bg-black text-white hover:bg-stone-900 py-2.5 min-h-[40px] text-[10px] sm:text-[11px] tracking-[0.15em] uppercase font-azeret font-bold inline-flex items-center justify-center gap-2 transition-all flex-shrink-0 shadow-sm active:scale-95 disabled:opacity-50 cursor-pointer"
               style="padding-left: 16px !important; padding-right: 16px !important;"
             >
               <span class="w-1.5 h-1.5 rounded-full bg-white inline-block flex-shrink-0"></span>
               <span class="whitespace-nowrap">{{ subscribing ? 'JOINING...' : 'SUBSCRIBE' }}</span>
             </button>
           </div>
-          <p
+          <!-- In-flow status message so it is always visible on mobile -->
+          <div
             v-if="subscribed"
-            class="absolute -bottom-7 left-0 text-[10px] tracking-widest text-[#B6965D] uppercase font-azeret font-semibold"
+            class="mt-3 p-3 bg-[#FAF8F5] border border-[#B6965D] text-[11px] tracking-wider text-[#B6965D] uppercase font-azeret font-semibold flex items-center gap-2 animate-fadeIn"
           >
-            {{ subscriptionMessage }}
-          </p>
-          <p
+            <svg class="w-4 h-4 text-[#B6965D] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+            <span>{{ subscriptionMessage }}</span>
+          </div>
+          <div
             v-else-if="subscriptionError"
-            class="absolute -bottom-7 left-0 text-[10px] tracking-widest text-red-600 uppercase font-azeret font-semibold"
+            class="mt-3 p-3 bg-red-50 border border-red-200 text-[11px] tracking-wider text-red-700 uppercase font-azeret font-semibold flex items-center gap-2 animate-fadeIn"
           >
-            {{ subscriptionError }}
-          </p>
+            <svg class="w-4 h-4 text-red-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            <span>{{ subscriptionError }}</span>
+          </div>
         </form>
       </div>
 

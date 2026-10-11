@@ -52,7 +52,7 @@ function handleWishlistClick() {
 function handleNotificationsClick() {
   if (!authStore.isAuthenticated) {
     authStore.setIntendedRoute('/tabs/home');
-    isAuthModalOpen.value = true;
+    authStore.openAuthModal('Please sign in to view your notifications and boutique appointments.');
     return;
   }
   isNotificationsOpen.value = true;

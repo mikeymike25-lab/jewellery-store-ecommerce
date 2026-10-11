@@ -39,6 +39,10 @@ class ProductController extends Controller
                 }
             }
 
+            if ($request->filled('carat') && ! $request->filled('diamonds') && $request->get('carat') !== 'all') {
+                $query->where('diamonds', $request->get('carat'));
+            }
+
             // Price range filter
             if ($request->filled('price')) {
                 $priceRange = $request->get('price');

@@ -97,8 +97,50 @@ export const useNotificationsStore = defineStore('notifications', {
 
       inFlightNotificationsPromise = (async () => {
         try {
-          const res = await apiClient.get<{ notifications: NotificationItem[] }>('/v1/notifications');
-          const list = res.data?.notifications || [];
+          const [notifRes, apptRes] = await Promise.allSettled([
+            apiClient.get<{ notifications: NotificationItem[] }>('/v1/notifications'),
+            apiClient.get<{ data: any[] }>('/v1/account/appointments'),
+          ]);
+
+          let list: NotificationItem[] = [];
+          if (notifRes.status === 'fulfilled') {
+            list = notifRes.value.data?.notifications || [];
+          }
+
+          // If user has appointments, check if any need representation in the notification feed
+          if (apptRes.status === 'fulfilled' && Array.isArray(apptRes.value.data?.data)) {
+            const appts = apptRes.value.data.data;
+            const existingApptIds = new Set(
+              list
+                .filter((n) => n.data?.appointment_id)
+                .map((n) => Number(n.data.appointment_id))
+            );
+
+            for (const appt of appts) {
+              if (!existingApptIds.has(Number(appt.id))) {
+                const statusCapitalized = (appt.status || 'pending').charAt(0).toUpperCase() + (appt.status || 'pending').slice(1);
+                list.push({
+                  id: -(appt.id || Date.now()), // pseudo negative ID for synthesized items
+                  title: `Salon Appointment (${statusCapitalized})`,
+                  message: `Salon consultation at ${appt.location || 'Maison Atelier'} reserved for ${appt.appointment_date} at ${appt.appointment_time || 'scheduled time'}.`,
+                  type: 'appointment',
+                  status: appt.status === 'completed' || appt.status === 'cancelled' ? 'read' : 'sent',
+                  created_at: appt.created_at || appt.appointment_date,
+                  data: {
+                    appointment_id: appt.id,
+                    location: appt.location,
+                    service_type: appt.service_type,
+                    status: appt.status,
+                    type: 'appointment',
+                  },
+                });
+              }
+            }
+
+            // Sort newest first
+            list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          }
+
           this.notifications = list;
           this.unreadCount = list.filter((n) => n.status !== 'read').length;
           this.lastFetchedTimestamp = Date.now();

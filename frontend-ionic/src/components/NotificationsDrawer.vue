@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import { useNotificationsStore, type NotificationItem } from '@/stores/notifications.store';
 import { useAuthStore } from '@/stores/auth.store';
 
@@ -13,11 +14,23 @@ const emit = defineEmits<{
   (e: 'count-updated', count: number): void;
 }>();
 
+const router = useRouter();
 const authStore = useAuthStore();
 const notificationsStore = useNotificationsStore();
 
 const notifications = computed(() => notificationsStore.notifications);
 const loading = computed(() => notificationsStore.loading);
+
+async function handleNotificationClick(notification: NotificationItem) {
+  await markAsRead(notification);
+  if (notification.type === 'appointment' || notification.data?.type === 'appointment') {
+    emit('close');
+    router.push('/appointments');
+  } else if (notification.data?.order_number) {
+    emit('close');
+    router.push('/account');
+  }
+}
 
 async function markAsRead(notification: NotificationItem) {
   await notificationsStore.markAsRead(notification);
@@ -164,6 +177,15 @@ watch(
             <p class="font-azeret text-xs text-stone-500 max-w-xs mx-auto">
               Access real-time shipping milestones, boutique appointment reminders, and private concierge communiqués.
             </p>
+            <div class="pt-2">
+              <button
+                type="button"
+                class="px-5 py-2.5 rounded-full bg-[#B6965D] hover:bg-[#9A7E4D] text-white font-azeret text-[10px] uppercase tracking-widest font-bold active:scale-95 transition-all shadow-sm cursor-pointer"
+                @click="emit('close'); authStore.openAuthModal('Sign in to view your boutique notifications and appointments.')"
+              >
+                Sign In
+              </button>
+            </div>
           </div>
 
           <!-- Empty State -->
@@ -186,13 +208,21 @@ watch(
               :key="item.id"
               class="p-4 bg-white border border-[#E0E0D9] transition-all cursor-pointer relative hover:border-[#B6965D]"
               :class="item.status !== 'read' ? 'border-l-4 border-l-[#B6965D]' : 'opacity-85'"
-              @click="markAsRead(item)"
+              @click="handleNotificationClick(item)"
             >
               <div class="flex items-start justify-between gap-2 mb-1">
-                <h4 class="font-playfair text-sm text-[#1A1A1A] font-semibold">
-                  {{ item.title }}
-                </h4>
-                <span class="font-azeret text-[10px] text-stone-400 whitespace-nowrap">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span
+                    v-if="item.type === 'appointment' || item.data?.type === 'appointment'"
+                    class="font-azeret text-[9px] uppercase tracking-wider px-1.5 py-0.5 bg-[#B6965D]/10 text-[#B6965D] font-bold rounded"
+                  >
+                    Salon Appointment
+                  </span>
+                  <h4 class="font-playfair text-sm text-[#1A1A1A] font-semibold">
+                    {{ item.title }}
+                  </h4>
+                </div>
+                <span class="font-azeret text-[10px] text-stone-400 whitespace-nowrap shrink-0">
                   {{ formatDate(item.created_at) }}
                 </span>
               </div>

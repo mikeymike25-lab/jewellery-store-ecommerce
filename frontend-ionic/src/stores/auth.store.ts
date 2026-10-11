@@ -19,6 +19,9 @@ interface AuthState {
   initialized: boolean;
   error: string | null;
   intendedRoute: string | null;
+  isAuthModalOpen: boolean;
+  authModalReason: string;
+  authModalMode: 'signin' | 'signup' | 'forgot';
 }
 
 export const useAuthStore = defineStore('auth', {
@@ -29,6 +32,9 @@ export const useAuthStore = defineStore('auth', {
     initialized: false,
     error: null,
     intendedRoute: null,
+    isAuthModalOpen: false,
+    authModalReason: '',
+    authModalMode: 'signin',
   }),
 
   getters: {
@@ -351,6 +357,17 @@ export const useAuthStore = defineStore('auth', {
       try {
         sessionStorage.removeItem('eclore_intended_route');
       } catch (_) {}
+    },
+
+    openAuthModal(reason = '', mode: 'signin' | 'signup' | 'forgot' = 'signin') {
+      this.authModalReason = reason;
+      this.authModalMode = mode;
+      this.isAuthModalOpen = true;
+    },
+
+    closeAuthModal() {
+      this.isAuthModalOpen = false;
+      this.authModalReason = '';
     },
   },
 });

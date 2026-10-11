@@ -30,9 +30,12 @@ async function handleDownloadReceipt() {
     pdfSuccess.value = true;
     setTimeout(() => {
       pdfSuccess.value = false;
-    }, 4000);
+    }, 5000);
   } catch (err: any) {
     pdfError.value = err.message || 'Receipt could not be downloaded.';
+    setTimeout(() => {
+      pdfError.value = '';
+    }, 6000);
   } finally {
     isDownloadingPdf.value = false;
   }
@@ -277,7 +280,7 @@ function resolveTimeline(status: string) {
 
           <div class="flex items-center space-x-2">
             <EcloreButton
-              v-if="order.payment_status === 'paid'"
+              v-if="order.payment_status && order.payment_status.toLowerCase() === 'paid'"
               variant="primary"
               size="sm"
               :disabled="isDownloadingPdf"

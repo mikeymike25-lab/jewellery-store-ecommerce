@@ -2,6 +2,9 @@ import { defineStore } from 'pinia';
 import { apiClient } from '@/api/client';
 import { useAuthStore } from '@/stores/auth.store';
 import type { Order, ReturnRepair, OrderTrackingResult } from '@/types';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 
 interface PaginationState {
   total: number;
@@ -161,21 +164,110 @@ export const useOrdersStore = defineStore('orders', {
 
     async downloadReceiptPdf(orderNumber: string) {
       try {
-        const res = await apiClient.get(`/v1/account/orders/${encodeURIComponent(orderNumber)}/receipt-pdf`, {
-          responseType: 'blob',
-        });
+        let res;
+        try {
+          res = await apiClient.get(`/v1/account/orders/${encodeURIComponent(orderNumber)}/receipt-pdf`, {
+            responseType: 'blob',
+          });
+        } catch (apiErr: any) {
+          if (apiErr.response?.status === 401 || apiErr.response?.status === 404) {
+            res = await apiClient.get(`/v1/orders/${encodeURIComponent(orderNumber)}/receipt-pdf`, {
+              responseType: 'blob',
+            });
+          } else {
+            throw apiErr;
+          }
+        }
         const blob = new Blob([res.data], { type: 'application/pdf' });
+        const fileName = `eclore-receipt-${orderNumber}.pdf`;
+
+        if (Capacitor.isNativePlatform()) {
+          // Native mobile execution (Android APK / iOS): save via Filesystem and present native share / open
+          const base64Data = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const result = reader.result as string;
+              const base64 = result.includes(',') ? result.split(',')[1] : result;
+              resolve(base64);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+
+          // Write to Cache directory so Android FileProvider can serve it
+          const writeResult = await Filesystem.writeFile({
+            path: fileName,
+            data: base64Data,
+            directory: Directory.Cache,
+          });
+
+          // Also attempt saving to Documents directory for persistent local access
+          try {
+            await Filesystem.writeFile({
+              path: fileName,
+              data: base64Data,
+              directory: Directory.Documents,
+            });
+          } catch (docErr) {
+            console.warn('Could not save receipt to Documents directory:', docErr);
+          }
+
+          // Open Android / iOS native share sheet so user can view with PDF viewer or save
+          let sharedSuccessfully = false;
+          try {
+            const canShare = await Share.canShare();
+            if (canShare.value) {
+              await Share.share({
+                title: `Éclore Receipt #${orderNumber}`,
+                files: [writeResult.uri],
+                dialogTitle: `Download or View Receipt #${orderNumber}`,
+              });
+              sharedSuccessfully = true;
+            }
+          } catch (shareErr: any) {
+            console.log('Native share dialog was dismissed or unavailable:', shareErr);
+          }
+
+          // If native share was not triggered or not supported, also trigger standard blob download
+          if (!sharedSuccessfully) {
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', fileName);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+          }
+
+          return true;
+        }
+
+        // Web browser environment: standard HTML5 anchor download
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.setAttribute('download', `eclore-receipt-${orderNumber}.pdf`);
+        link.setAttribute('download', fileName);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
         return true;
       } catch (err: any) {
-        const errorMsg = err.response?.data?.message || 'Official tax receipt is only available for confirmed paid orders.';
+        let errorMsg = 'Could not generate official document for this order. Please try again.';
+        if (err.response?.data instanceof Blob) {
+          try {
+            const text = await err.response.data.text();
+            const json = JSON.parse(text);
+            if (json.message) {
+              errorMsg = json.message;
+            }
+          } catch {}
+        } else if (err.response?.data?.message) {
+          errorMsg = err.response.data.message;
+        } else if (err.message) {
+          errorMsg = err.message;
+        }
         throw new Error(errorMsg);
       }
     },

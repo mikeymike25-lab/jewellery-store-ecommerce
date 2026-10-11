@@ -19,6 +19,7 @@ import SortModal from '@/components/SortModal.vue';
 import CurrencyDisplay from '@/components/CurrencyDisplay.vue';
 import { useWishlistStore } from '@/stores/wishlist.store';
 import { useCatalogueStore } from '@/stores/catalogue.store';
+import { useAuthStore } from '@/stores/auth.store';
 import type { Product } from '@/types';
 import { getProductImage } from '@/utils/product-image';
 
@@ -26,6 +27,7 @@ const route = useRoute();
 const router = useRouter();
 const wishlistStore = useWishlistStore();
 const catalogueStore = useCatalogueStore();
+const authStore = useAuthStore();
 
 // State
 const contentRef = ref<InstanceType<typeof IonContent> | null>(null);
@@ -137,6 +139,10 @@ function handleSelectSort(val: string) {
 
 function toggleWishlist(prod: Product, e: Event) {
   e.stopPropagation();
+  if (!authStore.isAuthenticated) {
+    authStore.openAuthModal('Please sign in to save creations to your Wishlist.');
+    return;
+  }
   wishlistStore.toggleItem(prod).catch((err) => {
     console.error('Wishlist toggle error:', err);
   });
@@ -182,7 +188,10 @@ async function loadProducts(page = 1, append = false, forceRefresh = false) {
     if (selectedColor.value) params.color = selectedColor.value;
     if (selectedMaterial.value) params.material = selectedMaterial.value;
     if (selectedGemstone.value) params.gemstone = selectedGemstone.value;
-    if (selectedDiamonds.value) params.carat = selectedDiamonds.value;
+    if (selectedDiamonds.value) {
+      params.diamonds = selectedDiamonds.value;
+      params.carat = selectedDiamonds.value;
+    }
     if (selectedPrice.value) params.price = selectedPrice.value;
 
     const { data: fetchedData, meta } = await catalogueStore.fetchProducts(params, { forceRefresh });

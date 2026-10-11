@@ -685,14 +685,33 @@ class AccountController extends Controller
 
         $user = $request->user() ?: Auth::user();
 
-        if (! $user) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 401);
+        // Query by order number
+        $query = Order::where('order_number', $orderNumber)->with(['orderItems.product']);
+
+        if ($user) {
+            // Allow if matched by user_id or email
+            $query->where(function ($q) use ($user) {
+                $q->where('user_id', $user->id)
+                  ->orWhere('customer_email', $user->email);
+            });
+        } else {
+            // Guest patron verification via guest session or request email
+            $guestSessionId = $request->header('X-Guest-Session-Id') ?: session()->getId();
+            $email = $request->input('email');
+            if (! $guestSessionId && ! $email) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized.'], 401);
+            }
+            $query->where(function ($q) use ($guestSessionId, $email) {
+                if ($guestSessionId) {
+                    $q->where('guest_session_id', $guestSessionId);
+                }
+                if ($email) {
+                    $q->orWhere('customer_email', $email);
+                }
+            });
         }
 
-        $order = Order::where('order_number', $orderNumber)
-            ->where('user_id', $user->id)
-            ->with(['orderItems.product'])
-            ->first();
+        $order = $query->first();
 
         if (! $order) {
             return response()->json(['success' => false, 'message' => 'Order not found.'], 404);
@@ -705,8 +724,24 @@ class AccountController extends Controller
             ], 403);
         }
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('receipt-pdf', compact('order', 'user'))
-            ->setPaper('a4', 'portrait');
+        // If user object is null (guest checkout), construct a lightweight user proxy
+        $patronUser = $user ?: (object) [
+            'first_name' => $order->customer_first_name ?? 'Guest',
+            'last_name' => $order->customer_last_name ?? 'Patron',
+            'email' => $order->customer_email,
+            'phone' => $order->customer_phone ?? '',
+            'street' => '',
+            'barangay' => '',
+            'city' => '',
+            'province' => '',
+            'region' => '',
+            'zip_code' => '',
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('receipt-pdf', [
+            'order' => $order,
+            'user' => $patronUser,
+        ])->setPaper('a4', 'portrait');
 
         return $pdf->download("eclore-receipt-{$order->order_number}.pdf");
     }

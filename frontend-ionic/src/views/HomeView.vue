@@ -10,11 +10,13 @@ import CurrencyDisplay from '@/components/CurrencyDisplay.vue';
 import type { Product } from '@/types';
 import { useWishlistStore } from '@/stores/wishlist.store';
 import { useCatalogueStore } from '@/stores/catalogue.store';
+import { useAuthStore } from '@/stores/auth.store';
 import { getProductImage } from '@/utils/product-image';
 
 const router = useRouter();
 const wishlistStore = useWishlistStore();
 const catalogueStore = useCatalogueStore();
+const authStore = useAuthStore();
 
 // Modals
 const isSearchOpen = ref(false);
@@ -113,6 +115,10 @@ const activePartner = ref(partnerList[0]);
 
 // Wishlist toggle connected to Pinia wishlistStore
 async function toggleWishlist(product: Product | number) {
+  if (!authStore.isAuthenticated) {
+    authStore.openAuthModal('Please sign in to save creations to your Wishlist.');
+    return;
+  }
   try {
     await wishlistStore.toggleItem(product);
   } catch (err) {

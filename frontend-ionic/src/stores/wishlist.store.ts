@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { apiClient } from '@/api/client';
+import { useAuthStore } from '@/stores/auth.store';
 import type { WishlistItem, Product } from '@/types';
 
 interface WishlistState {
@@ -84,6 +85,12 @@ export const useWishlistStore = defineStore('wishlist', {
     },
 
     async toggle(productId: number | string, productData?: any) {
+      const authStore = useAuthStore();
+      if (!authStore.isAuthenticated) {
+        authStore.openAuthModal('Please sign in to save creations to your Wishlist.');
+        return false;
+      }
+
       const idNum = Number(productId);
       if (!idNum) return false;
 
@@ -123,6 +130,12 @@ export const useWishlistStore = defineStore('wishlist', {
     },
 
     async add(productId: number | string, productData?: any) {
+      const authStore = useAuthStore();
+      if (!authStore.isAuthenticated) {
+        authStore.openAuthModal('Please sign in to save creations to your Wishlist.');
+        return;
+      }
+
       const idNum = Number(productId);
       if (!idNum) return;
       if (!this.isInWishlist(idNum)) {
