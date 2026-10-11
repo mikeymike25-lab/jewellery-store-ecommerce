@@ -4,15 +4,21 @@ namespace Database\Seeders;
 
 use App\Models\Employee;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class EmployeeSeeder extends Seeder
 {
     public function run(): void
     {
-        Employee::query()->delete();
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement('TRUNCATE TABLE employees RESTART IDENTITY CASCADE;');
+        } else {
+            Employee::query()->delete();
+        }
 
         Employee::create([
+            'id' => 1,
             'first_name' => 'Super',
             'last_name' => 'Admin',
             'email' => 'admin@eclore.co',
@@ -24,5 +30,9 @@ class EmployeeSeeder extends Seeder
             'position' => 'System Administrator',
             'two_factor_enabled' => false,
         ]);
+
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement("SELECT setval(pg_get_serial_sequence('employees', 'id'), coalesce((SELECT MAX(id) FROM employees), 1));");
+        }
     }
 }

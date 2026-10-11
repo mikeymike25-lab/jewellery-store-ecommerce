@@ -485,17 +485,17 @@ Route::get('/seed-database-init', function () {
         }
 
         \Artisan::call('db:seed', [
+            '--class' => 'EmployeeSeeder',
+            '--force' => true,
+        ]);
+
+        \Artisan::call('db:seed', [
             '--class' => 'CategorySeeder',
             '--force' => true,
         ]);
 
         \Artisan::call('db:seed', [
             '--class' => 'ProductSeeder',
-            '--force' => true,
-        ]);
-
-        \Artisan::call('db:seed', [
-            '--class' => 'EmployeeSeeder',
             '--force' => true,
         ]);
 
