@@ -7,10 +7,13 @@ echo "Starting Laravel application..."
 export PORT=${PORT:-80}
 
 # Create .env file with environment variables from Docker Compose
-# Ensure APP_KEY exists before writing .env
+# Ensure APP_KEY exists and has base64: prefix before writing .env
 if [ -z "$APP_KEY" ]; then
     echo "No APP_KEY passed in environment, generating one..."
     export APP_KEY="base64:$(openssl rand -base64 32)"
+elif [[ "$APP_KEY" != base64:* ]]; then
+    echo "Prepending base64: prefix to APP_KEY..."
+    export APP_KEY="base64:$APP_KEY"
 else
     echo "Using existing APP_KEY from environment."
 fi
@@ -106,6 +109,15 @@ if [ $counter -lt $timeout ]; then
     echo "Database is ready!"
     echo "Running migrations..."
     php artisan migrate --force || echo "Migrations completed with notices, continuing..."
+
+    echo "Checking if database needs initial seeding..."
+    PROD_COUNT=$(php artisan tinker --execute="echo \App\Models\Product::count();" 2>/dev/null || echo "0")
+    if [ "$PROD_COUNT" = "0" ] || [ -z "$PROD_COUNT" ]; then
+        echo "Database has 0 products. Running seeders..."
+        php artisan db:seed --force || echo "Seeding finished with notices, continuing..."
+    else
+        echo "Database already has $PROD_COUNT products, skipping seed."
+    fi
 else
     echo "Skipping migrations due to database connection timeout"
 fi

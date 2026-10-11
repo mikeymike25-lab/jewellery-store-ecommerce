@@ -96,7 +96,13 @@ return [
 
     'cipher' => 'AES-256-CBC',
 
-    'key' => env('APP_KEY'),
+    'key' => (function() {
+        $key = env('APP_KEY');
+        if ($key && !str_starts_with($key, 'base64:') && strlen($key) === 44 && str_ends_with($key, '=')) {
+            return 'base64:' . $key;
+        }
+        return $key;
+    })(),
 
     'previous_keys' => [
         ...array_filter(
